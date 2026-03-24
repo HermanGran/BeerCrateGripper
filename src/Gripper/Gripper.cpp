@@ -5,42 +5,59 @@
 #include "Actuators/StepperMotor.hpp"
 #include "Sensors/LimitSwitch.hpp"
 
-Gripper::Gripper() {
-    stepper_ = new StepperMotor(5, 4, 6);
-    limit_ = new LimitSwitch(10); // Må endre pin
-    current_ = new CurrentSensor(13); // Må endre pin
-}
-void Gripper::init() const {
-    stepper_->init();
-    limit_->init();
+Gripper::Gripper()
+    : stepper_(6, 4, 5),
+      limit_(10),
+      current_(13)
+{}
+
+void Gripper::init() {
+    stepper_.init();
+    limit_.init();
 }
 
-void Gripper::homing() const {
-    stepper_->setSpeed(800);
-    stepper_->setAcceleration(400);
+void Gripper::homing() {
+    Serial.println("Homing...");
+    auto s = stepper_.getStepper();
+    s->setSpeed(2000);
 
-    while (limit_->isPressed()) {
-        stepper_->runToPosition(stepper_->getStepper()->currentPosition() + 100);
+    //stepper_.getStepper()->moveTo(1000000);
+
+    Serial.print("Waiting for limit switch...");
+    while (!limit_.isPressed()) {
+        if (millis() % 1000 == 0) {
+            Serial.print(".");
+        }
+
+        s->runSpeed();
     }
 
-    stepper_->stop();
-    while (stepper_->getStepper()->isRunning()) {
-        stepper_->run();
+
+
+    Serial.println();
+    Serial.println("Limit switch pressed!");
+
+    s->setSpeed(-400);
+    while (limit_.isPressed()) {
+        if (millis() % 1000 == 0) {
+            Serial.print(".");
+        }
+
+        s->runSpeed();
     }
 
-    stepper_->setHomePos();
-    stepper_->runToPosition(-100);
+    stepper_.setHomePos();
+    //stepper_.runToPosition(-100);
 
-    stepper_->setSpeed(6000);
-    stepper_->setAcceleration(2000);
+    Serial.println("Homing done!");
 }
 
-void Gripper::open() const {
-    stepper_->runToPosition(-100);
+void Gripper::open() {
+    stepper_.runToPosition(0);
 }
 
-void Gripper::close() const {
-    stepper_->runToPosition(-3200 * 10);
+void Gripper::close() {
+    stepper_.runToPosition(-3200 * 16);
 }
 
 

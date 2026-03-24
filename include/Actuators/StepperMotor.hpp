@@ -12,24 +12,24 @@ class StepperMotor {
 public:
     StepperMotor(const int EN_PIN, const int DIR_PIN, const int STEP_PIN);
 
-    void init() const;
+    void init();
 
-    void setSpeed(int speed) const;
+    void setSpeed(int speed);
 
-    void setAcceleration(int acceleration) const;
+    void setAcceleration(int acceleration);
 
-    void setHomePos() const;
+    void setHomePos();
 
-    void run() const;
+    void run();
 
-    void stop() const;
+    void stop();
 
-    void runToPosition(const int position) const;
+    void runToPosition(const int position);
 
-    AccelStepper* getStepper() const;
+    AccelStepper* getStepper();
 
 private:
-    AccelStepper* stepper_;
+    AccelStepper stepper_;
 
     const int EN_PIN_;
     const int DIR_PIN_;
