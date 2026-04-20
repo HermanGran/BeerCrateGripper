@@ -6,9 +6,9 @@
 #include "Sensors/LimitSwitch.hpp"
 
 Gripper::Gripper()
-    : stepper_(6, 4, 5),
-      limit_(10),
-      current_(13)
+    : stepper_(5, 12, 11),
+      limit_(A4),
+      current_(A7)
 {}
 
 void Gripper::init() {
