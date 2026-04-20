@@ -7,7 +7,7 @@
 
 Gripper::Gripper()
     : stepper_(5, 12, 11),
-      limit_(A4),
+      limit_(4),
       current_(A7)
 {}
 
@@ -19,13 +19,15 @@ void Gripper::init() {
 void Gripper::homing() {
     Serial.println("Homing...");
     auto s = stepper_.getStepper();
-    s->setSpeed(2000);
+    s->setSpeed(-2000);
 
     //stepper_.getStepper()->moveTo(1000000);
 
     Serial.print("Waiting for limit switch...");
+    int lastMillis = 0;
     while (!limit_.isPressed()) {
-        if (millis() % 1000 == 0) {
+        if (lastMillis + 1000 < millis() ) {
+            lastMillis = millis();
             Serial.print(".");
         }
 
@@ -37,7 +39,7 @@ void Gripper::homing() {
     Serial.println();
     Serial.println("Limit switch pressed!");
 
-    s->setSpeed(-400);
+    s->setSpeed(400);
     while (limit_.isPressed()) {
         if (millis() % 1000 == 0) {
             Serial.print(".");
@@ -52,12 +54,14 @@ void Gripper::homing() {
     Serial.println("Homing done!");
 }
 
-void Gripper::open() {
+void Gripper::close() {
     stepper_.runToPosition(0);
+    Serial.println("Closed");
 }
 
-void Gripper::close() {
-    stepper_.runToPosition(-3200 * 16);
+void Gripper::open() {
+    stepper_.runToPosition(3200 * 6);
+    Serial.println("Opened");
 }
 
 
