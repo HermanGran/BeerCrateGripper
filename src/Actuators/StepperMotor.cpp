@@ -15,7 +15,7 @@ StepperMotor::StepperMotor(const int EN_PIN, const int DIR_PIN, const int STEP_P
 void StepperMotor::init() {
     pinMode(EN_PIN_, OUTPUT);
     digitalWrite(EN_PIN_, LOW);   // TMC2208 enabled
-    stepper_.setMaxSpeed(6000);      // steps per second
+    stepper_.setMaxSpeed(4000);      // steps per second
     stepper_.setAcceleration(2000);  // steps per second^2
 }
 

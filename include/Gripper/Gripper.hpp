@@ -24,7 +24,8 @@ public:
     StepperMotor& getStepper();
 
     CurrentSensor& getCurrentSensor();
-    TaskHandle_t callerTaskHandle_ = NULL;
+    TaskHandle_t   callerTaskHandle_ = NULL;
+    volatile bool  tasksRunning_     = false;
 private:
     void moveToPosition(int position);
 
