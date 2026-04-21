@@ -15,7 +15,7 @@ public:
     // samples    : number of ADC readings to average per measurement
     CurrentSensor(int pin, float vcc = 3.3f, float sensitivity = 0.4f, int samples = 50);
 
-    void  begin();
+    void  init();
 
     // Returns averaged current in amps (signed — negative means reverse flow)
     float readCurrentA();

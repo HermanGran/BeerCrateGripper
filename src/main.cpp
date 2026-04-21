@@ -8,6 +8,7 @@ SerialCommandHandler cmdHandler(gripper);
 void setup() {
     gripper.init();
     cmdHandler.init();
+
 }
 
 void loop() {

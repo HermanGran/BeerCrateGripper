@@ -10,6 +10,8 @@
 #include <Sensors/LimitSwitch.hpp>
 #include <Sensors/CurrentSensor.hpp>
 
+
+
 class Gripper {
 public:
     Gripper();
@@ -19,7 +21,13 @@ public:
     void close();
     bool isClosed(); // To be added later, must include the current sensor to sense latching
 
+    StepperMotor& getStepper();
+
+    CurrentSensor& getCurrentSensor();
+    TaskHandle_t callerTaskHandle_ = NULL;
 private:
+    void moveToPosition(int position);
+
     StepperMotor stepper_;
     LimitSwitch limit_;
     CurrentSensor current_;

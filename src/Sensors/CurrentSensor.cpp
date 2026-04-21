@@ -9,7 +9,7 @@ CurrentSensor::CurrentSensor(int pin, float vcc, float sensitivity, int samples)
     : pin_(pin), vcc_(vcc), sensitivity_(sensitivity), samples_(samples), zeroOffset_(vcc / 2.0f)
 {}
 
-void CurrentSensor::begin() {
+void CurrentSensor::init() {
     analogReadResolution(12);   // ESP32: use full 12-bit range (0–4095)
     pinMode(pin_, INPUT);
 

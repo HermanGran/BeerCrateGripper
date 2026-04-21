@@ -4,8 +4,12 @@
 
 #include "Actuators/StepperMotor.hpp"
 
-StepperMotor::StepperMotor(const int EN_PIN, const int DIR_PIN, const int STEP_PIN)
-    : stepper_(AccelStepper::DRIVER, STEP_PIN, DIR_PIN), EN_PIN_(EN_PIN), DIR_PIN_(DIR_PIN), STEP_PIN_(STEP_PIN)
+StepperMotor::StepperMotor(const int EN_PIN, const int DIR_PIN, const int STEP_PIN, CurrentSensor& currentSensor)
+    :   stepper_(AccelStepper::DRIVER, STEP_PIN, DIR_PIN),
+        current_(currentSensor),
+        EN_PIN_(EN_PIN),
+        DIR_PIN_(DIR_PIN),
+        STEP_PIN_(STEP_PIN)
 {}
 
 void StepperMotor::init() {
@@ -32,9 +36,6 @@ AccelStepper* StepperMotor::getStepper() {
     return &stepper_;
 }
 
-void StepperMotor::run() {
-    stepper_.run();
-}
 
 void StepperMotor::stop() {
     stepper_.stop();
@@ -42,7 +43,19 @@ void StepperMotor::stop() {
 
 void StepperMotor::runToPosition(const int position) {
     stepper_.moveTo(position);
-    while (stepper_.distanceToGo() != 0) {
+    running_ = true;
+}
+
+void StepperMotor::run() {
+    if (running_) {
         stepper_.run();
+        if (stepper_.distanceToGo() == 0) {
+            running_ = false;
+        }
     }
 }
+
+bool StepperMotor::isRunning() const {
+    return running_;
+}
+

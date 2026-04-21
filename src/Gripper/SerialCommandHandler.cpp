@@ -15,6 +15,15 @@ void SerialCommandHandler::init(unsigned long baud) {
         ; // wait for serial (ESP32 usually doesn't need this, but safe)
     }
 
+    esp_reset_reason_t reason = esp_reset_reason();
+    if (reason == ESP_RST_TASK_WDT) {
+        Serial.println("RESET REASON: Task Watchdog!");
+    } else if (reason == ESP_RST_INT_WDT) {
+        Serial.println("RESET REASON: Interrupt Watchdog!");
+    } else {
+        Serial.println("RESET REASON: " + String(reason));
+    }
+
     Serial.println("Ready. Commands: open, close, home");
 }
 

@@ -7,10 +7,11 @@
 
 #include <Arduino.h>
 #include <AccelStepper.h>
+#include <Sensors/CurrentSensor.hpp>
 
 class StepperMotor {
 public:
-    StepperMotor(const int EN_PIN, const int DIR_PIN, const int STEP_PIN);
+    StepperMotor(int EN_PIN, int DIR_PIN, int STEP_PIN, CurrentSensor& currentSensor);
 
     void init();
 
@@ -28,12 +29,17 @@ public:
 
     AccelStepper* getStepper();
 
+    bool isRunning() const;
+
 private:
     AccelStepper stepper_;
+    CurrentSensor& current_;
 
     const int EN_PIN_;
     const int DIR_PIN_;
     const int STEP_PIN_;
+
+    volatile bool running_ = false;
 };
 
 #endif //BEERCRATEGRIPPER_STEPPERMOTOR_HPP
