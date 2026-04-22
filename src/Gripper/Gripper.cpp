@@ -23,6 +23,7 @@ void Gripper::init() {
 
 void Gripper::homing() {
     Serial.println("Homing...");
+    stepper_.getStepper()->enableOutputs();
     auto s = stepper_.getStepper();
     s->setSpeed(-2000);
 
@@ -51,6 +52,7 @@ void Gripper::homing() {
     }
 
     stepper_.setHomePos();
+    stepper_.getStepper()->disableOutputs();
     Serial.println("Homing done!");
 }
 

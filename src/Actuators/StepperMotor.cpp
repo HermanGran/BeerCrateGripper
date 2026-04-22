@@ -17,6 +17,8 @@ void StepperMotor::init() {
     digitalWrite(EN_PIN_, LOW);   // TMC2208 enabled
     stepper_.setMaxSpeed(4000);      // steps per second
     stepper_.setAcceleration(2000);  // steps per second^2
+    stepper_.setEnablePin(EN_PIN_);
+    stepper_.setPinsInverted(false, false, true);
 }
 
 void StepperMotor::setSpeed(const int speed) {
@@ -42,6 +44,7 @@ void StepperMotor::stop() {
 }
 
 void StepperMotor::runToPosition(const int position) {
+    stepper_.enableOutputs();
     stepper_.moveTo(position);
     running_ = true;
 }
@@ -51,6 +54,7 @@ void StepperMotor::run() {
         stepper_.run();
         if (stepper_.distanceToGo() == 0) {
             running_ = false;
+            stepper_.disableOutputs();
         }
     }
 }
