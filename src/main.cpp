@@ -8,6 +8,7 @@
 #include <ArduinoOTA.h>
 #include <Gripper/Gripper.hpp>
 #include <Gripper/SerialCommandHandler.hpp>
+#include <Debug/UDPLogger.hpp>
 
 Gripper gripper;
 SerialCommandHandler cmdHandler(gripper);
@@ -17,6 +18,8 @@ SerialCommandHandler cmdHandler(gripper);
 #define WIFI_PASSWORD "89546543"
 #define AGENT_IP      "192.168.0.100"  // Your PC's IP
 #define AGENT_PORT    8888
+
+UDPLogger logger;
 
 // Static IP config — change to match your PC's subnet
 IPAddress local_ip(192, 168, 0, 102);   // ESP32's desired IP
@@ -82,14 +85,15 @@ void timer_callback(rcl_timer_t* timer, int64_t last_call_time) {
     if (timer != NULL) {
         msg.data++;
         rcl_publish(&publisher, &msg, NULL);
-        Serial.println("Published: " + String(msg.data));
+        logger.logf("Published: %d", msg.data);
     }
 }
 
 void setup() {
     Serial.begin(115200);
-    delay(2000);
+    delay(3000);
 
+    //WiFi.config(local_ip, gateway, subnet);  // static IP — keeps OTA port stable
     set_microros_wifi_transports(
         WIFI_SSID,
         WIFI_PASSWORD,
@@ -97,30 +101,40 @@ void setup() {
         AGENT_PORT
     );
 
+    // UDP socket must be opened after WiFi connects
+    logger.init(IPAddress(192, 168, 0, 104), 4444);
+
     // OTA setup
     ArduinoOTA.setHostname("gripper-esp32");  // Optional friendly name
     ArduinoOTA.setPassword("herman");  // Optional password
 
+    logger.logf("Logger started");
+
     ArduinoOTA.onStart([]() {
-        Serial.println("OTA Start");
+        logger.logf("OTA Start");
     });
     ArduinoOTA.onEnd([]() {
-        Serial.println("OTA Done!");
+        logger.logf("OTA Done!");
     });
     ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-        Serial.printf("Progress: %u%%\n", (progress / (total / 100)));
+        logger.logf("Progress: %u%%\n", (progress / (total / 100)));
     });
     ArduinoOTA.onError([](ota_error_t error) {
-        Serial.printf("OTA Error: %u\n", error);
+        logger.logf("OTA Error %u\n", error);
     });
 
     ArduinoOTA.begin();
-    Serial.println("OTA Ready!");
+    logger.logf("OTA Ready!");
+
+    logger.logf("ESP32 connected! IP: %s", WiFi.localIP().toString().c_str());
 
     gripper.init();
     cmdHandler.init();
 
 }
+
+unsigned long lastMillis = 0;
+int i = 0;
 
 void loop() {
     ArduinoOTA.handle();  // Must be called regularly — add at top of loop
@@ -167,26 +181,4 @@ void loop() {
             break;
     }
     */
-    cmdHandler.update();
 }
-
-
-/*
-#include <Arduino.h>
-#include <Gripper/Gripper.hpp>
-#include <Gripper/SerialCommandHandler.hpp>
-
-Gripper gripper;
-SerialCommandHandler cmdHandler(gripper);
-
-void setup() {
-    gripper.init();
-    cmdHandler.init();
-
-}
-
-void loop() {
-    cmdHandler.update();
-}
-
-*/

@@ -19,6 +19,7 @@ void StepperMotor::init() {
     stepper_.setAcceleration(2000);  // steps per second^2
     stepper_.setEnablePin(EN_PIN_);
     stepper_.setPinsInverted(false, false, true);
+    stepper_.disableOutputs();
 }
 
 void StepperMotor::setSpeed(const int speed) {
