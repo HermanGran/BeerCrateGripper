@@ -5,9 +5,10 @@
 #include "Actuators/StepperMotor.hpp"
 #include "Sensors/LimitSwitch.hpp"
 #include "esp_task_wdt.h"
+#include <Debug/Logger.hpp>
 
-TaskHandle_t stepperTaskHandle = NULL;
-TaskHandle_t sensorTaskHandle  = NULL;
+TaskHandle_t stepperTaskHandle = nullptr;
+TaskHandle_t sensorTaskHandle  = nullptr;
 
 Gripper::Gripper()
     : stepper_(5, 12, 11, current_),
@@ -22,43 +23,33 @@ void Gripper::init() {
 }
 
 void Gripper::homing() {
-    Serial.println("Homing...");
+    logger.logf("Homing...");
     stepper_.getStepper()->enableOutputs();
     auto s = stepper_.getStepper();
     s->setSpeed(-2000);
 
 
-    Serial.print("Waiting for limit switch...");
-    int lastMillis = 0;
+    logger.logf("Waiting for limit switch...");
     while (!limit_.isPressed()) {
-        if (lastMillis + 1000 < millis() ) {
-            lastMillis = millis();
-            Serial.print(".");
-        }
-
         s->runSpeed();
     }
 
-    Serial.println();
-    Serial.println("Limit switch pressed!");
+    logger.logf("Limit switch pressed!");
 
     s->setSpeed(400);
     while (limit_.isPressed()) {
-        if (millis() % 1000 == 0) {
-            Serial.print(".");
-        }
 
         s->runSpeed();
     }
 
     stepper_.setHomePos();
     stepper_.getStepper()->disableOutputs();
-    Serial.println("Homing done!");
+    logger.logf("Homing done!");
 }
 
 static void stepperTaskWrapper(void* param) {
-    Gripper* g = static_cast<Gripper*>(param);
-    esp_task_wdt_add(NULL);  // this task feeds the WDT while the idle task cannot
+    auto* g = static_cast<Gripper*>(param);
+    esp_task_wdt_add(nullptr);  // this task feeds the WDT while the idle task cannot
 
     while (g->tasksRunning_) {
         g->getStepper().run();
@@ -69,26 +60,26 @@ static void stepperTaskWrapper(void* param) {
         taskYIELD();
     }
 
-    esp_task_wdt_delete(NULL);
+    esp_task_wdt_delete(nullptr);
     xTaskNotifyGive(g->callerTaskHandle_);
-    vTaskSuspend(NULL);
+    vTaskSuspend(nullptr);
 }
 
 static void sensorTaskWrapper(void* param) {
-    Gripper* g = static_cast<Gripper*>(param);
+    auto* g = static_cast<Gripper*>(param);
 
     while (g->tasksRunning_) {
         g->getCurrentSensor().printTelemetry();
-        vTaskDelay(10 / portTICK_PERIOD_MS);
+        vTaskDelay(50 / portTICK_PERIOD_MS);
     }
 
     // Notify caller so it knows this task has finished and is safe to delete
     xTaskNotifyGive(g->callerTaskHandle_);
-    vTaskSuspend(NULL);
+    vTaskSuspend(nullptr);
 }
 
-void Gripper::moveToPosition(int position) {
-    if (stepperTaskHandle != NULL) return;
+void Gripper::moveToPosition(const int position) {
+    if (stepperTaskHandle != nullptr) return;
 
     stepper_.runToPosition(position);
     tasksRunning_     = true;
@@ -108,20 +99,20 @@ void Gripper::moveToPosition(int position) {
 
     vTaskDelete(stepperTaskHandle);
     vTaskDelete(sensorTaskHandle);
-    stepperTaskHandle = NULL;
-    sensorTaskHandle  = NULL;
+    stepperTaskHandle = nullptr;
+    sensorTaskHandle  = nullptr;
 
     esp_task_wdt_add(idle0);  // restore idle task WDT monitoring
 }
 
 void Gripper::close() {
     moveToPosition(0);
-    Serial.println("Closed");
+    logger.logf("Gripper closed");
 }
 
 void Gripper::open() {
-    moveToPosition(3200 * 6);
-    Serial.println("Opened");
+    moveToPosition(3200 * 7);
+    logger.logf("Gripper opened");
 }
 
 StepperMotor& Gripper::getStepper() {

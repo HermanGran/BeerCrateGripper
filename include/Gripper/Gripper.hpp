@@ -10,7 +10,9 @@
 #include <Sensors/LimitSwitch.hpp>
 #include <Sensors/CurrentSensor.hpp>
 
-
+#define GRIPPER_HOME 0
+#define GRIPPER_LATCH 1
+#define GRIPPER_RELEASE 2
 
 class Gripper {
 public:
@@ -24,8 +26,8 @@ public:
     StepperMotor& getStepper();
 
     CurrentSensor& getCurrentSensor();
-    TaskHandle_t   callerTaskHandle_ = NULL;
-    volatile bool  tasksRunning_     = false;
+    TaskHandle_t callerTaskHandle_ = NULL;
+    volatile bool tasksRunning_ = false;
 private:
     void moveToPosition(int position);
 

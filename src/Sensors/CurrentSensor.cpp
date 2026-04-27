@@ -4,6 +4,7 @@
 
 #include "Sensors/CurrentSensor.hpp"
 #include <Arduino.h>
+#include <Debug/Logger.hpp>
 
 CurrentSensor::CurrentSensor(int pin, float vcc, float sensitivity, int samples)
     : pin_(pin), vcc_(vcc), sensitivity_(sensitivity), samples_(samples), zeroOffset_(vcc / 2.0f)
@@ -37,7 +38,5 @@ bool CurrentSensor::isLatched(float thresholdA) {
 
 void CurrentSensor::printTelemetry() {
     // Format: "millis,amps\n"  — easy to parse with Python serial + matplotlib
-    Serial.print(millis());
-    Serial.print(',');
-    Serial.println(readCurrentA(), 4);
+    logger.logf("Current: %.4f A", readCurrentA());
 }

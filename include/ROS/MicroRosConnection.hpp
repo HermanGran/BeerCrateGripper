@@ -36,14 +36,18 @@ public:
 
     void update();
 
+    void updateOTA();
+
 private:
-    IPAddress agent_ip{192,168,9,100};
+    IPAddress agent_ip{192,168,0,100};
 
     #define RCCHECK(fn) { if(fn != RCL_RET_OK) { return false; }}
 
     bool createEntities();
 
     void destroyEntities();
+
+    bool errorLight = false;
 
 };
 

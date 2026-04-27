@@ -11,16 +11,25 @@
 #include <std_msgs/msg/bool.h>
 #include <std_msgs/msg/float32.h>
 
+#include <rclc/service.h>
+#include <workcell_interfaces/srv/gripper_command.h>
+
 class GripperNode : public RosNode {
 public:
     explicit GripperNode(Gripper &gripper);
 
     int executor_handles() override;
 
-    bool init(rcl_node_t *node, rclc_executor_t *executor) override;
+    bool init(rcl_node_t* node, rclc_support_t* support, rclc_executor_t* executor) override;
+    void fini(rcl_node_t* node) override;
 
 private:
     Gripper &gripper_;
+
+    rcl_service_t service;
+    workcell_interfaces__srv__GripperCommand_Request  request;
+    workcell_interfaces__srv__GripperCommand_Response response;
+
     rcl_publisher_t    current_pub;
     rcl_subscription_t command_sub;
     rcl_timer_t        timer;
@@ -30,9 +39,14 @@ private:
     std_msgs__msg__Float32 current_msg;
     std_msgs__msg__Bool    command_msg;
 
-
     static GripperNode* instance;
 
+    char response_msg_buf[64];
+
+    static void service_callback(const void* req, void* res);
+
 };
+
+
 
 #endif //BEERCRATEGRIPPER_GRIPPERNODE_HPP
