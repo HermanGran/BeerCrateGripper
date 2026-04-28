@@ -43,16 +43,16 @@ void SerialCommandHandler::update() {
 }
 
 void SerialCommandHandler::processCommand(const String& cmd) {
-    if (cmd == "open") {
-        Serial.println("Opening gripper");
-        gripper_.open();
+    if (cmd == "latch") {
+        Serial.println("Gripepr latching...");
+        gripper_.latch();
     }
-    else if (cmd == "close") {
-        Serial.println("Closing gripper");
-        gripper_.close();
+    else if (cmd == "release") {
+        Serial.println("Gripper releasing...");
+        gripper_.release();
     }
     else if (cmd == "home") {
-        Serial.println("Homing gripper");
+        Serial.println("Homing gripper...");
         gripper_.homing();
     }
     else {

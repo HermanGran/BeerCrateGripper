@@ -50,20 +50,22 @@ void GripperNode::service_callback(const void* req, void* res) {
 
     switch (request->command) {
         case GRIPPER_HOME: // 0
+            logger.logf("Gripper homing...");
             instance->gripper_.homing();
             success = true;
-            logger.logf("Gripper homing");
+            logger.logf("Done.");
             break;
         case GRIPPER_LATCH: // 1
-            instance->gripper_.open();
+            logger.logf("Gripper latching...");
+            instance->gripper_.latch();
             success = true;
-            logger.logf("Gripper opening");
+            logger.logf("Done.");
             break;
         case GRIPPER_RELEASE: // 2
-            instance->gripper_.close();
+            logger.logf("Gripper releasing...");
+            instance->gripper_.release();
             success = true;
-            logger.logf("Gripper closing");
-
+            logger.logf("Done.");
             break;
         default:
             logger.logf("Unknown command: %d", request->command);

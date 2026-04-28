@@ -23,11 +23,9 @@ void Gripper::init() {
 }
 
 void Gripper::homing() {
-    logger.logf("Homing...");
     stepper_.getStepper()->enableOutputs();
     auto s = stepper_.getStepper();
     s->setSpeed(-2000);
-
 
     logger.logf("Waiting for limit switch...");
     while (!limit_.isPressed()) {
@@ -44,7 +42,6 @@ void Gripper::homing() {
 
     stepper_.setHomePos();
     stepper_.getStepper()->disableOutputs();
-    logger.logf("Homing done!");
 }
 
 static void stepperTaskWrapper(void* param) {
@@ -105,14 +102,12 @@ void Gripper::moveToPosition(const int position) {
     esp_task_wdt_add(idle0);  // restore idle task WDT monitoring
 }
 
-void Gripper::close() {
+void Gripper::release() {
     moveToPosition(0);
-    logger.logf("Gripper closed");
 }
 
-void Gripper::open() {
-    moveToPosition(3200 * 7);
-    logger.logf("Gripper opened");
+void Gripper::latch() {
+    moveToPosition(3200 * 7.1);
 }
 
 StepperMotor& Gripper::getStepper() {
@@ -121,4 +116,8 @@ StepperMotor& Gripper::getStepper() {
 
 CurrentSensor& Gripper::getCurrentSensor() {
     return current_;
+}
+
+LimitSwitch& Gripper::getLimitSwitch() {
+    return limit_;
 }

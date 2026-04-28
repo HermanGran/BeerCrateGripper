@@ -19,14 +19,16 @@ public:
     Gripper();
     void init();
     void homing();
-    void open();
-    void close();
+    void latch();
+    void release();
     bool isClosed(); // To be added later, must include the current sensor to sense latching
 
     StepperMotor& getStepper();
 
     CurrentSensor& getCurrentSensor();
-    TaskHandle_t callerTaskHandle_ = NULL;
+
+    LimitSwitch& getLimitSwitch();
+    TaskHandle_t callerTaskHandle_ = nullptr;
     volatile bool tasksRunning_ = false;
 private:
     void moveToPosition(int position);
