@@ -111,6 +111,7 @@ void MicroRosConnection::update() {
 
         case AGENT_DISCONNECTED:
             destroyEntities();
+            set_microros_wifi_transports(WIFI_SSID, WIFI_PASSWORD, IPAddress(192, 168, 0, 100), AGENT_PORT);
             state = WAITING_AGENT;
             break;
     }
@@ -169,6 +170,6 @@ bool MicroRosConnection::createEntities() {
 void MicroRosConnection::destroyEntities() {
     for (auto* n : nodes) n->fini(&node);
     rclc_executor_fini(&executor);
-    rclc_support_fini(&support);
     rcl_node_fini(&node);
+    rclc_support_fini(&support);
 }
