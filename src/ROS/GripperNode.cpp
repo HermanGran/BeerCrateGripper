@@ -57,9 +57,8 @@ void GripperNode::service_callback(const void* req, void* res) {
             break;
         case GRIPPER_LATCH: // 1
             logger.logf("Gripper latching...");
-            instance->gripper_.latch();
-            success = true;
-            logger.logf("Done.");
+            success = instance->gripper_.latch();
+            logger.logf(success ? "Latched!" : "Latch failed!");
             break;
         case GRIPPER_RELEASE: // 2
             logger.logf("Gripper releasing...");

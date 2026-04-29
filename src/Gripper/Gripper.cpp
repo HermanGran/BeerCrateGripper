@@ -10,6 +10,12 @@
 TaskHandle_t stepperTaskHandle = nullptr;
 TaskHandle_t sensorTaskHandle  = nullptr;
 
+#define STEPS 3200 // Number of steps in one rotation
+#define LATCH_ZONE_START  (STEPS * 5)    // Steps — after this we expect to hit something
+#define TIGHTEN_STEPS     (STEPS * 0.3)  // Extra steps to tighten after contact
+#define CURRENT_THRESHOLD  0.400f       // Amps — contact detected above this
+#define TIGHTEN_SPEED      400          // Slower speed for tightening
+
 Gripper::Gripper()
     : stepper_(5, 12, 11, current_),
       limit_(4),
@@ -23,6 +29,8 @@ void Gripper::init() {
 }
 
 void Gripper::homing() {
+    gripperState_ = MOVING;
+
     stepper_.getStepper()->enableOutputs();
     auto s = stepper_.getStepper();
     s->setSpeed(-2000);
@@ -42,17 +50,68 @@ void Gripper::homing() {
 
     stepper_.setHomePos();
     stepper_.getStepper()->disableOutputs();
+    gripperState_ = HOME;
 }
 
+// Created with claude code
 static void stepperTaskWrapper(void* param) {
     auto* g = static_cast<Gripper*>(param);
     esp_task_wdt_add(nullptr);  // this task feeds the WDT while the idle task cannot
 
+    int tightenStepsRemaining = TIGHTEN_STEPS;
+
     while (g->tasksRunning_) {
-        g->getStepper().run();
-        if (!g->getStepper().isRunning()) {
-            g->tasksRunning_ = false;
+
+        const int currentPos = g->getStepper().getStepper()->currentPosition();
+        const bool contact = g->getCurrentSensor().isLatched(CURRENT_THRESHOLD);
+        const bool inLatchZone = currentPos > LATCH_ZONE_START;
+
+        switch (g->getGripperState()) {
+            case Gripper::GripperState::MOVING:
+                g->getStepper().run();
+                if (contact && !inLatchZone) {
+                    // Hit something too early, stopping
+                    g->getStepper().stop();
+                    logger.logf("Obstacle detected at pos %d — stopping!", currentPos);
+
+                    g->setGripperState(Gripper::GripperState::OBSTACLE_DETECTED);
+                    g->tasksRunning_ = false;
+
+                } else if (contact && inLatchZone) {
+                    // Hit something in latch zone — slow down and tighten
+                    logger.logf("Contact in latch zone at pos %d — tightening", currentPos);
+                    g->getStepper().setSpeed(TIGHTEN_SPEED);
+                    g->getStepper().setAcceleration(500);
+                    g->getStepper().getStepper()->move(TIGHTEN_STEPS);
+                    g->setGripperState(Gripper::GripperState::TIGHTENING);
+
+                } else if (!g->getStepper().isRunning()) {
+                    // Reached end without contact
+                    logger.logf("Reached end without contact — failed to grip");
+                    g->setGripperState(Gripper::GripperState::FAILED);
+                    g->tasksRunning_ = false;
+                }
+                break;
+
+            case Gripper::GripperState::TIGHTENING:
+                g->getStepper().run();
+                tightenStepsRemaining--;
+
+                if (!g->getStepper().isRunning() || tightenStepsRemaining <= 0) {
+                    // Done tightening
+                    logger.logf("Tightening done — latched!");
+                    g->getStepper().stop();
+                    g->setGripperState(Gripper::GripperState::LATCHED);
+                    g->tasksRunning_ = false;
+                }
+                break;
+
+            default:
+                g->tasksRunning_ = false;
+                break;
         }
+
+
         esp_task_wdt_reset();
         taskYIELD();
     }
@@ -106,8 +165,23 @@ void Gripper::release() {
     moveToPosition(0);
 }
 
-void Gripper::latch() {
+bool Gripper::latch() {
+    setGripperState(MOVING);
     moveToPosition(3200 * 7.1);
+
+    switch (gripperState_) {
+        case FAILED:
+            logger.logf("Failed to grip");
+            return false;
+        case OBSTACLE_DETECTED:
+            logger.logf("Obstacle detected");
+            return false;
+        case LATCHED:
+            logger.logf("Gripped");
+            return true;
+        default:
+            return false;
+    }
 }
 
 StepperMotor& Gripper::getStepper() {
@@ -120,4 +194,12 @@ CurrentSensor& Gripper::getCurrentSensor() {
 
 LimitSwitch& Gripper::getLimitSwitch() {
     return limit_;
+}
+
+Gripper::GripperState Gripper::getGripperState() const {
+    return gripperState_;
+}
+
+void Gripper::setGripperState(const GripperState state) {
+    gripperState_ = state;
 }

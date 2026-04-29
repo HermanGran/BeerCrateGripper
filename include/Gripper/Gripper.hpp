@@ -63,7 +63,7 @@ public:
      *          potential damage to the gripper mechanism. If the stepper motor slips,
      *          run home to avoid damaging the gripper when releasing.
      */
-    void latch();
+    bool latch();
 
     /**
      * @brief Releases the gripper by moving it to the open position (home pos)
@@ -98,8 +98,25 @@ public:
 
     TaskHandle_t callerTaskHandle_ = nullptr;
     volatile bool tasksRunning_ = false;
+
+    enum GripperState {
+        IDLE, // Not homed, not running
+        HOME, // Homed
+        MOVING, // Normal movement, not in latch state
+        OBSTACLE_DETECTED, // Obstacle detected before it should be hitting something
+        TIGHTENING, // In latch zone, hit something and slow down
+        LATCHED, // Successfully latched
+        FAILED // Reached and didn't detect anything
+    };
+
+    GripperState getGripperState() const;
+
+    void setGripperState(GripperState state);
+
 private:
     void moveToPosition(int position);
+
+    GripperState gripperState_ = IDLE;
 
     StepperMotor stepper_;
     LimitSwitch limit_;
