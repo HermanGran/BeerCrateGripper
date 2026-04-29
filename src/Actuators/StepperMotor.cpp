@@ -35,7 +35,7 @@ void StepperMotor::setHomePos() {
     stepper_.setCurrentPosition(0);
 }
 
-AccelStepper* StepperMotor::getStepper() {
+AccelStepper* StepperMotor::getAccelStepper() {
     return &stepper_;
 }
 

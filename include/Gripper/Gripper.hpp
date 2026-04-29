@@ -10,10 +10,6 @@
 #include <Sensors/LimitSwitch.hpp>
 #include <Sensors/CurrentSensor.hpp>
 
-#define GRIPPER_HOME 0
-#define GRIPPER_LATCH 1
-#define GRIPPER_RELEASE 2
-
 /**
  * @class Gripper
  *
@@ -96,31 +92,57 @@ public:
      */
     LimitSwitch& getLimitSwitch();
 
-    TaskHandle_t callerTaskHandle_ = nullptr;
-    volatile bool tasksRunning_ = false;
-
-    enum GripperState {
+    // Gripper states
+    enum class GripperState {
         IDLE, // Not homed, not running
         HOME, // Homed
         MOVING, // Normal movement, not in latch state
         OBSTACLE_DETECTED, // Obstacle detected before it should be hitting something
-        TIGHTENING, // In latch zone, hit something and slow down
+        TIGHTENING, // In the latch zone, hit something and slow down
         LATCHED, // Successfully latched
         FAILED // Reached and didn't detect anything
     };
 
-    GripperState getGripperState() const;
+    // Gripper actions
+    enum class GripperAction : uint8_t {
+        HOME,
+        LATCH,
+        RELEASE,
+        IDLE // Move to the idle position
+    };
 
-    void setGripperState(GripperState state);
+    // Gripper state, default is idle
+    GripperState gripperState_ = GripperState::IDLE;
+    GripperAction gripperAction_ = GripperAction::IDLE;
 
+    TaskHandle_t callerTaskHandle_ = nullptr;
+    volatile bool tasksRunning_ = false;
 private:
-    void moveToPosition(int position);
 
-    GripperState gripperState_ = IDLE;
-
+    // Objects used by the gripper
     StepperMotor stepper_;
     LimitSwitch limit_;
     CurrentSensor current_;
+
+    TaskHandle_t stepperTaskHandle = nullptr;
+    TaskHandle_t sensorTaskHandle  = nullptr;
+
+    void moveToPosition(int position);
+    static void sensorTaskWrapper(void* param);
+    static void stepperTaskWrapper(void* param);
+
+    // Various positions and steps
+    static constexpr int stepsPerRev_ = 3200;
+    static constexpr int latchZoneStart_ = stepsPerRev_ * 5;
+    static constexpr int tightenSteps_ = stepsPerRev_ * 0.3;
+    static constexpr int fullyExtended_ = stepsPerRev_ * 8;
+    static constexpr int idlePos_ = stepsPerRev_ * 5;
+
+    // Current threshold for detecting obstacles
+    static constexpr float currentThreshold_ = 0.400;
+
+    // Speed used for tightening when hitting the crate
+    static constexpr int tightenSpeed_ = 400;
 };
 
 #endif //BEERCRATEGRIPPER_GRIPPER_HPP

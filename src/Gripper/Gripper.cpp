@@ -7,15 +7,6 @@
 #include "esp_task_wdt.h"
 #include <Debug/Logger.hpp>
 
-TaskHandle_t stepperTaskHandle = nullptr;
-TaskHandle_t sensorTaskHandle  = nullptr;
-
-#define STEPS 3200 // Number of steps in one rotation
-#define LATCH_ZONE_START  (STEPS * 5)    // Steps — after this we expect to hit something
-#define TIGHTEN_STEPS     (STEPS * 0.3)  // Extra steps to tighten after contact
-#define CURRENT_THRESHOLD  0.400f       // Amps — contact detected above this
-#define TIGHTEN_SPEED      400          // Slower speed for tightening
-
 Gripper::Gripper()
     : stepper_(5, 12, 11, current_),
       limit_(4),
@@ -28,11 +19,12 @@ void Gripper::init() {
     current_.init();
 }
 
-void Gripper::homing() {
-    gripperState_ = MOVING;
 
-    stepper_.getStepper()->enableOutputs();
-    auto s = stepper_.getStepper();
+void Gripper::homing() {
+    gripperState_ = GripperState::MOVING;
+
+    stepper_.getAccelStepper()->enableOutputs();
+    auto s = stepper_.getAccelStepper();
     s->setSpeed(-2000);
 
     logger.logf("Waiting for limit switch...");
@@ -49,63 +41,82 @@ void Gripper::homing() {
     }
 
     stepper_.setHomePos();
-    stepper_.getStepper()->disableOutputs();
-    gripperState_ = HOME;
+    stepper_.getAccelStepper()->disableOutputs();
+    gripperState_ = GripperState::HOME;
 }
 
-// Created with claude code
-static void stepperTaskWrapper(void* param) {
+// Large help from claude code and claude
+// https://www.youtube.com/watch?v=p4sDgQ-jao4 Function pointers
+// https://www.youtube.com/watch?v=PcAD6gjNUVw Function pointers as state machine
+void Gripper::stepperTaskWrapper(void* param) {
     auto* g = static_cast<Gripper*>(param);
     esp_task_wdt_add(nullptr);  // this task feeds the WDT while the idle task cannot
 
-    int tightenStepsRemaining = TIGHTEN_STEPS;
-
     while (g->tasksRunning_) {
 
-        const int currentPos = g->getStepper().getStepper()->currentPosition();
-        const bool contact = g->getCurrentSensor().isLatched(CURRENT_THRESHOLD);
-        const bool inLatchZone = currentPos > LATCH_ZONE_START;
+        const int currentPos = g->getStepper().getAccelStepper()->currentPosition();
+        const bool contact = g->getCurrentSensor().isLatched(currentThreshold_);
+        const bool inLatchZone = currentPos > latchZoneStart_;
 
-        switch (g->getGripperState()) {
-            case Gripper::GripperState::MOVING:
-                g->getStepper().run();
-                if (contact && !inLatchZone) {
-                    // Hit something too early, stopping
-                    g->getStepper().stop();
-                    logger.logf("Obstacle detected at pos %d — stopping!", currentPos);
+        switch (g->gripperAction_) {
+            case GripperAction::LATCH:
 
-                    g->setGripperState(Gripper::GripperState::OBSTACLE_DETECTED);
-                    g->tasksRunning_ = false;
+                switch (g->gripperState_) {
+                    case GripperState::MOVING:
+                        g->getStepper().run();
+                        if (contact && !inLatchZone) {
+                            // Hit something too early, stopping
+                            g->getStepper().stop();
+                            g->getStepper().getAccelStepper()->moveTo(currentPos);
+                            logger.logf("Obstacle detected at pos %d — stopping!", currentPos);
 
-                } else if (contact && inLatchZone) {
-                    // Hit something in latch zone — slow down and tighten
-                    logger.logf("Contact in latch zone at pos %d — tightening", currentPos);
-                    g->getStepper().setSpeed(TIGHTEN_SPEED);
-                    g->getStepper().setAcceleration(500);
-                    g->getStepper().getStepper()->move(TIGHTEN_STEPS);
-                    g->setGripperState(Gripper::GripperState::TIGHTENING);
+                            g->gripperState_ = GripperState::OBSTACLE_DETECTED;
+                            g->tasksRunning_ = false;
 
-                } else if (!g->getStepper().isRunning()) {
-                    // Reached end without contact
-                    logger.logf("Reached end without contact — failed to grip");
-                    g->setGripperState(Gripper::GripperState::FAILED);
-                    g->tasksRunning_ = false;
+                        } else if (contact && inLatchZone) {
+                            // Hit something in latch zone — slow down and tighten
+                            logger.logf("Contact in latch zone at pos %d — tightening", currentPos);
+                            g->getStepper().setSpeed(tightenSpeed_);
+                            g->getStepper().setAcceleration(500);
+                            g->getStepper().getAccelStepper()->moveTo(currentPos + tightenSteps_);
+                            g->gripperState_ = GripperState::TIGHTENING;
+
+                        } else if (!g->getStepper().isRunning()) {
+                            // Reached end without contact
+                            logger.logf("Reached end without contact — failed to grip");
+                            g->gripperState_ = GripperState::FAILED;
+                            g->tasksRunning_ = false;
+                        }
+                        break;
+
+                    case GripperState::TIGHTENING:
+                        g->getStepper().run();
+
+                        if (!g->getStepper().isRunning()) {
+                            // Done tightening
+                            logger.logf("Tightening done — latched!");
+                            g->getStepper().stop();
+                            g->gripperState_ = GripperState::LATCHED;
+                            g->tasksRunning_ = false;
+                        }
+                        break;
+
+                    default:
+                        g->tasksRunning_ = false;
+                        break;
                 }
                 break;
 
-            case Gripper::GripperState::TIGHTENING:
+            case GripperAction::RELEASE:
                 g->getStepper().run();
-                tightenStepsRemaining--;
 
-                if (!g->getStepper().isRunning() || tightenStepsRemaining <= 0) {
+                if (!g->getStepper().isRunning()) {
                     // Done tightening
-                    logger.logf("Tightening done — latched!");
-                    g->getStepper().stop();
-                    g->setGripperState(Gripper::GripperState::LATCHED);
+                    logger.logf("Moved to idle position");
+                    g->gripperState_ = GripperState::IDLE;
                     g->tasksRunning_ = false;
                 }
                 break;
-
             default:
                 g->tasksRunning_ = false;
                 break;
@@ -121,7 +132,8 @@ static void stepperTaskWrapper(void* param) {
     vTaskSuspend(nullptr);
 }
 
-static void sensorTaskWrapper(void* param) {
+// Created with claude code. Prints the current measurements to the UDP logger.
+void Gripper::sensorTaskWrapper(void* param) {
     auto* g = static_cast<Gripper*>(param);
 
     while (g->tasksRunning_) {
@@ -129,11 +141,14 @@ static void sensorTaskWrapper(void* param) {
         vTaskDelay(50 / portTICK_PERIOD_MS);
     }
 
-    // Notify caller so it knows this task has finished and is safe to delete
+    // Notify the caller so it knows this task has finished and is safe to delete
     xTaskNotifyGive(g->callerTaskHandle_);
     vTaskSuspend(nullptr);
 }
 
+
+// Created by claude code. To be able to run the stepper motor while also logging
+// current values without sowing the motor down.
 void Gripper::moveToPosition(const int position) {
     if (stepperTaskHandle != nullptr) return;
 
@@ -162,21 +177,23 @@ void Gripper::moveToPosition(const int position) {
 }
 
 void Gripper::release() {
-    moveToPosition(0);
+    gripperState_ = GripperState::MOVING;
+    moveToPosition(idlePos_);
+    gripperState_ = GripperState::HOME;
 }
 
 bool Gripper::latch() {
-    setGripperState(MOVING);
-    moveToPosition(3200 * 7.1);
+    gripperState_ = GripperState::MOVING;
+    moveToPosition(fullyExtended_);
 
     switch (gripperState_) {
-        case FAILED:
+        case GripperState::FAILED:
             logger.logf("Failed to grip");
             return false;
-        case OBSTACLE_DETECTED:
+        case GripperState::OBSTACLE_DETECTED:
             logger.logf("Obstacle detected");
             return false;
-        case LATCHED:
+        case GripperState::LATCHED:
             logger.logf("Gripped");
             return true;
         default:
@@ -194,12 +211,4 @@ CurrentSensor& Gripper::getCurrentSensor() {
 
 LimitSwitch& Gripper::getLimitSwitch() {
     return limit_;
-}
-
-Gripper::GripperState Gripper::getGripperState() const {
-    return gripperState_;
-}
-
-void Gripper::setGripperState(const GripperState state) {
-    gripperState_ = state;
 }

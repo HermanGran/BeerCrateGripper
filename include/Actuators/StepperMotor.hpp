@@ -115,7 +115,7 @@ public:
      *
      * @return
      */
-    AccelStepper* getStepper();
+    AccelStepper* getAccelStepper();
 
     /**
      * @brief

@@ -44,28 +44,32 @@ void GripperNode::service_callback(const void* req, void* res) {
     const auto* request  = (workcell_interfaces__srv__GripperCommand_Request*)req;
     auto* response = (workcell_interfaces__srv__GripperCommand_Response*)res;
 
-    logger.logf("Service request: command=%d", request->command);
+    auto cmd = static_cast<Gripper::GripperAction>(request->command);
+    logger.logf("Service request: command=%d", cmd);
 
     bool success = false;
 
-    switch (request->command) {
-        case GRIPPER_HOME: // 0
+    switch (cmd) {
+        case Gripper::GripperAction::HOME: // 0
             logger.logf("Gripper homing...");
             instance->gripper_.homing();
             success = true;
             logger.logf("Done.");
             break;
-        case GRIPPER_LATCH: // 1
+        case Gripper::GripperAction::LATCH: // 1
             logger.logf("Gripper latching...");
             success = instance->gripper_.latch();
             logger.logf(success ? "Latched!" : "Latch failed!");
             break;
-        case GRIPPER_RELEASE: // 2
+        case Gripper::GripperAction::RELEASE: // 2
             logger.logf("Gripper releasing...");
             instance->gripper_.release();
             success = true;
             logger.logf("Done.");
             break;
+        case Gripper::GripperAction::IDLE:
+            logger.logf("Gripper moving to idle position...");
+
         default:
             logger.logf("Unknown command: %d", request->command);
             break;
