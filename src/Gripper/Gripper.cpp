@@ -134,7 +134,7 @@ void Gripper::idlePos() {
 
 bool Gripper::latch() {
     gripperState_ = GripperState::LATCHING;
-    getStepper().setSpeed(3000);
+    getStepper().setSpeed(4000);
     getStepper().setAcceleration(2000);
     moveToPosition(fullyExtended_);
 
