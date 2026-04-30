@@ -49,7 +49,7 @@ void SerialCommandHandler::processCommand(const String& cmd) {
     }
     else if (cmd == "release") {
         Serial.println("Gripper releasing...");
-        gripper_.release();
+        gripper_.home();
     }
     else if (cmd == "home") {
         Serial.println("Homing gripper...");

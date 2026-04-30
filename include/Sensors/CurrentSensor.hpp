@@ -6,6 +6,7 @@
 #define BEERCRATEGRIPPER_CURRENTSENSOR_HPP
 
 #include <Arduino.h>
+#include <atomic>
 
 class CurrentSensor {
 public:
@@ -18,13 +19,18 @@ public:
     void  init();
 
     // Returns averaged current in amps (signed — negative means reverse flow)
-    float readCurrentA();
+    float readCurrentA() const;
 
     // Returns true when |current| exceeds thresholdA — use for latch detection
-    bool  isLatched(float thresholdA);
+    bool  isLatched(float thresholdA) const;
 
     // Prints "millis,amps\n" to Serial — call in a loop for Python live-plotting
-    void  printTelemetry();
+    void  printTelemetry() const;
+
+    // Functions for threading and avoiding locks
+    void updateReading();
+
+    float getLatestReading() const;
 
 private:
     int   pin_;
@@ -33,7 +39,9 @@ private:
     int   samples_;
     float zeroOffset_;   // measured quiescent voltage in V, set by begin()
 
-    float sampleAvgV();  // average ADC reading converted to volts
+    std::atomic<float> currentA_{0.0f};
+
+    float sampleAvgV() const;  // average ADC reading converted to volts
 };
 
 #endif //BEERCRATEGRIPPER_CURRENTSENSOR_HPP

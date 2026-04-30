@@ -18,25 +18,38 @@ void CurrentSensor::init() {
     zeroOffset_ = sampleAvgV();
 }
 
-float CurrentSensor::sampleAvgV() {
+float CurrentSensor::sampleAvgV() const {
     long sum = 0;
     for (int i = 0; i < samples_; i++) {
         sum += analogRead(pin_);
+        delayMicroseconds(100);  // spread samples across PWM switching cycles
     }
     float avgRaw = static_cast<float>(sum) / samples_;
     return (avgRaw / 4095.0f) * vcc_;
 }
 
-float CurrentSensor::readCurrentA() {
-    float voltage = sampleAvgV();
+float CurrentSensor::readCurrentA() const {
+    const float voltage = sampleAvgV();
     return (voltage - zeroOffset_) / sensitivity_;
 }
 
-bool CurrentSensor::isLatched(float thresholdA) {
-    return fabsf(readCurrentA()) >= thresholdA;
+bool CurrentSensor::isLatched(const float thresholdA) const {
+    return fabsf(getLatestReading()) >= thresholdA;
 }
 
-void CurrentSensor::printTelemetry() {
+void CurrentSensor::printTelemetry() const {
     // Format: "millis,amps\n"  — easy to parse with Python serial + matplotlib
-    logger.logf("Current: %.4f A", readCurrentA());
+    logger.logf("Current: %.4f A", getLatestReading());
+}
+
+// Help from claude to crete this function
+void CurrentSensor::updateReading() {
+    float newReading = readCurrentA();
+    float prev = currentA_.load(std::memory_order_relaxed);
+    currentA_.store(0.3f * newReading + 0.7f * prev, std::memory_order_relaxed);
+}
+
+// Help from claude to create this function returns latest reading updated by the updateReading function
+float CurrentSensor::getLatestReading() const {
+    return currentA_.load(std::memory_order_relaxed);
 }

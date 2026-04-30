@@ -69,7 +69,9 @@ public:
      * @note This method assumes the gripper has been initialized and is properly
      * calibrated to accurately respond to positional commands.
      */
-    void release();
+    void home();
+
+    void idlePos();
 
     /**
      * @brief Getter function for the stepper motor object within this class.
@@ -96,18 +98,20 @@ public:
     enum class GripperState {
         IDLE, // Not homed, not running
         HOME, // Homed
-        MOVING, // Normal movement, not in latch state
+        LATCHING, // Normal movement, not in latch state
         OBSTACLE_DETECTED, // Obstacle detected before it should be hitting something
         TIGHTENING, // In the latch zone, hit something and slow down
         LATCHED, // Successfully latched
-        FAILED // Reached and didn't detect anything
+        FAILED, // Reached and didn't detect anything
+        RELEASING, // Releasing
+        NUM_STATES
     };
 
     // Gripper actions
     enum class GripperAction : uint8_t {
-        HOME,
+        HOMING,
         LATCH,
-        RELEASE,
+        HOME,
         IDLE // Move to the idle position
     };
 
@@ -116,7 +120,7 @@ public:
     GripperAction gripperAction_ = GripperAction::IDLE;
 
     TaskHandle_t callerTaskHandle_ = nullptr;
-    volatile bool tasksRunning_ = false;
+    std::atomic<bool> tasksRunning_{false};
 private:
 
     // Objects used by the gripper
@@ -133,16 +137,60 @@ private:
 
     // Various positions and steps
     static constexpr int stepsPerRev_ = 3200;
-    static constexpr int latchZoneStart_ = stepsPerRev_ * 5;
-    static constexpr int tightenSteps_ = stepsPerRev_ * 0.3;
-    static constexpr int fullyExtended_ = stepsPerRev_ * 8;
-    static constexpr int idlePos_ = stepsPerRev_ * 5;
+    static constexpr int idlePos_ = stepsPerRev_ * 4;
+    static constexpr int latchZoneStart_ = idlePos_;
+    static constexpr int tightenSteps_ = stepsPerRev_ * 0.03;
+    static constexpr int fullyExtended_ = stepsPerRev_ * 7.5;
+    static constexpr int homePos_ = 0;
 
     // Current threshold for detecting obstacles
-    static constexpr float currentThreshold_ = 0.400;
+    static constexpr float currentThreshold_ = 0.310;
+
+    // Debounce: millis() timestamp of first above-threshold reading, 0 = no contact
+    uint32_t contactStartMs_ = 0;
+    static constexpr uint32_t contactDebounceMs_ = 75;
 
     // Speed used for tightening when hitting the crate
     static constexpr int tightenSpeed_ = 400;
+
+    /**
+     * Struct that defines the state machine table
+     */
+    struct StatemachineType {
+        GripperState state;
+        void (Gripper::*handler)();
+    };
+
+    // Loop function for state machine
+    void Sm_Loop();
+
+    // State machine functions
+    void Sm_Idle();
+    void Sm_Home();
+    void Sm_Latching();
+    void Sm_Releasing();
+    void Sm_ObstacleDetected();
+    void Sm_Tighten();
+    void Sm_Latched();
+    void Sm_Failed();
+    //void Sm_Release();
+
+
+    /**
+     * State machine table
+     * Inspired from Beningo
+     * https://www.beningo.com/158-state-machines-with-function-pointers/
+     */
+    std::array<StatemachineType, static_cast<size_t>(GripperState::NUM_STATES)> stateMachine_ = {{
+        { GripperState::IDLE, &Gripper::Sm_Idle},
+        {GripperState::HOME, &Gripper::Sm_Home},
+        {GripperState::LATCHING, &Gripper::Sm_Latching},
+        {GripperState::OBSTACLE_DETECTED, &Gripper::Sm_ObstacleDetected},
+        {GripperState::TIGHTENING, &Gripper::Sm_Tighten},
+        {GripperState::LATCHED, &Gripper::Sm_Latched},
+        {GripperState::FAILED, &Gripper::Sm_Failed},
+        {GripperState::RELEASING, &Gripper::Sm_Releasing}
+    }};
 };
 
 #endif //BEERCRATEGRIPPER_GRIPPER_HPP

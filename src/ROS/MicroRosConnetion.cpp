@@ -136,6 +136,7 @@ bool MicroRosConnection::createEntities() {
     }
     rcl_init_options_fini(&init_options);
 
+    node = rcl_get_zero_initialized_node();
     if (rclc_node_init_default(&node, "gripper_node", "", &support) != RCL_RET_OK) {
         logger.logf("FAIL: node_init");
         rclc_support_fini(&support);
