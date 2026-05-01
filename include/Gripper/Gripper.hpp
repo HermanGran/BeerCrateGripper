@@ -71,6 +71,9 @@ public:
      */
     void home();
 
+    /**
+     * @brief Moves the gripper to a predefined idlePos
+     */
     void idlePos();
 
     /**
@@ -139,7 +142,7 @@ private:
     static constexpr int stepsPerRev_ = 3200;
     static constexpr int idlePos_ = stepsPerRev_ * 4;
     static constexpr int latchZoneStart_ = idlePos_;
-    static constexpr int tightenSteps_ = stepsPerRev_ * 0.03;
+    static constexpr int tightenSteps_ = stepsPerRev_ * 0.01;
     static constexpr int fullyExtended_ = stepsPerRev_ * 7.5;
     static constexpr int homePos_ = 0;
 
@@ -173,12 +176,12 @@ private:
     void Sm_Tighten();
     void Sm_Latched();
     void Sm_Failed();
-    //void Sm_Release();
 
 
     /**
      * State machine table
      * Inspired from Beningo
+     *
      * https://www.beningo.com/158-state-machines-with-function-pointers/
      */
     std::array<StatemachineType, static_cast<size_t>(GripperState::NUM_STATES)> stateMachine_ = {{

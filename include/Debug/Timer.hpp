@@ -7,6 +7,14 @@
 
 #include <Arduino.h>
 
+/**
+ * @class Timer
+ * @brief A class for managing and handling periodic timer interrupts.
+ *
+ * The Timer class utilizes hardware timing features to provide precise periodic
+ * interrupt-based event handling. It supports initialization of a timer, checking
+ * for elapsed time periods, and resetting the timer's state.
+ */
 class Timer {
 public:
     explicit Timer(uint32_t periodUs);

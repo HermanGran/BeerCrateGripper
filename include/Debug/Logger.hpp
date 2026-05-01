@@ -7,6 +7,7 @@
 
 #include <Debug/UDPLogger.hpp>
 
+// Creates an instance of the UDPLogger object to be anywhere
 extern UDPLogger logger;
 
 #endif //BEERCRATEGRIPPER_LOGGER_HPP

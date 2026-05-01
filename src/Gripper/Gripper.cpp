@@ -1,6 +1,7 @@
 //
 // Created by Herman Hårstad Gran on 23/03/2026.
 //
+
 #include "Gripper/Gripper.hpp"
 #include "Actuators/StepperMotor.hpp"
 #include "Sensors/LimitSwitch.hpp"
@@ -8,7 +9,7 @@
 #include <Debug/Logger.hpp>
 
 Gripper::Gripper()
-    : stepper_(5, 12, 11, current_),
+    : stepper_(5, 12, 11),
       limit_(4),
       current_(2)
 {}

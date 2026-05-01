@@ -2,13 +2,11 @@
 #include <micro_ros_platformio.h>
 
 #include <Gripper/Gripper.hpp>
-#include <Gripper/SerialCommandHandler.hpp>
 #include <Debug/Logger.hpp>
 #include <ROS/MicroRosConnection.hpp>
 #include <ROS/GripperNode.hpp>
 
 Gripper gripper;
-SerialCommandHandler cmdHandler(gripper);
 GripperNode gripperNode(gripper);
 
 UDPLogger logger;
@@ -23,7 +21,6 @@ void setup() {
     mrCon.initOTA("esp32-gripper", "herman");
 
     gripper.init();
-    cmdHandler.init();
     mrCon.registerNode(&gripperNode);
 }
 

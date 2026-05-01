@@ -11,13 +11,10 @@
 
 
 /**
- * @brief Moves the stepper motor to the specified target position.
+ * @class StepperMotor
+ * @brief Represents a stepper motor controlled using the AccelStepper library, with support for hardware initialization, speed control, position control, and acceleration management.
  *
- * This function instructs the motor to move to the given position by calculating
- * the required steps. It utilizes acceleration and deceleration to ensure smooth
- * motion. The motor runs until the target position is reached.
- *
- * @param position Target position to move the motor to, in steps.
+ * The StepperMotor class provides methods to initialize the stepper motor, control its motion, and interact with its positional or running state. It uses the AccelStepper library for precise control of step and direction signals and includes a current sensor for collision detection.
  */
 class StepperMotor {
 public:
@@ -31,9 +28,8 @@ public:
      * @param EN_PIN Enable pin for the motor driver
      * @param DIR_PIN Direction pin for the motor driver
      * @param STEP_PIN Step pin for the motor driver
-     * @param currentSensor Current sensor object
      */
-    StepperMotor(int EN_PIN, int DIR_PIN, int STEP_PIN, CurrentSensor& currentSensor);
+    StepperMotor(int EN_PIN, int DIR_PIN, int STEP_PIN);
 
     /**
      * @brief Initializes the stepper motor and its settings.
@@ -105,33 +101,43 @@ public:
     void stop();
 
     /**
+     * @brief Runs the stepper motor to a position
      *
-     * @param position
+     * This function takes in a position in number of steps to move. The position is internally stored. It utilizes a smooth stop and start.
+     *
+     * @note A full rotation is 3200 steps. To move the motor one full rotation, send 3200 as a position
+     *
+     * @param position number of steps the motor moves
      */
     void runToPosition(int position);
 
 
     /**
+     * @brief Returns the AccelStepper object
      *
-     * @return
+     * Returns a pointer to the AccelStepper object, a third party library for the stepper motor driver
+     *
+     * @return a pointer to the AccelStepper
      */
     AccelStepper* getAccelStepper();
 
     /**
-     * @brief
+     * @brief A boolean value that is updated if the motor is running or not
      *
      * @return Boolean status, running or stopped
      */
     bool isRunning() const;
 
 private:
+    // Objects used by this class
     AccelStepper stepper_;
-    CurrentSensor& current_;
 
+    // Pins for the motor driver
     const int EN_PIN_;
     const int DIR_PIN_;
     const int STEP_PIN_;
 
+    // Bool if the motor is running
     volatile bool running_ = false;
 };
 
