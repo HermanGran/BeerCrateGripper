@@ -15,7 +15,12 @@ MicroRosConnection mrCon;
 void setup() {
     Serial.begin(115200);
 
-    mrCon.initWiFi(IPAddress(192, 168, 0, 100));
+    mrCon.initWiFi(
+        "TP-Link_9538",
+        "89546543",
+        IPAddress(192, 168, 0, 100)
+        );
+
     logger.init(IPAddress(192, 168, 0, 100), 4444);
     logger.logf("Logger started");
     mrCon.initOTA("esp32-gripper", "herman");

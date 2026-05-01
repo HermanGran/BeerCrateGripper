@@ -10,13 +10,39 @@
 #include <ROS/RosNode.hpp>
 
 
-#define WIFI_SSID     "TP-Link_9538"
-#define WIFI_PASSWORD "89546543"
-#define ROS_DOMAIN_ID 7
-#define AGENT_PORT    8888
-
 class MicroRosConnection {
 public:
+
+    std::vector<RosNode*> nodes;  // All registered ROS components
+
+    void registerNode(RosNode * node);
+
+    void initWiFi(const char* ssid, const char* password, const IPAddress& ros_agent);
+
+    static void initOTA(const char* hostName, const char* password);
+
+    void update();
+
+    static void updateOTA();
+
+private:
+    const char *ssid_ = nullptr;
+    const char *password_ = nullptr;
+    const size_t domain_id_ = 7;
+    const size_t agent_port_ = 8888;
+    IPAddress agent_ip_ ;
+
+    // Static network configurations
+    const IPAddress localIP{192, 168, 0, 104};
+    const IPAddress gateway{192, 168, 0, 1};
+    const IPAddress subnet{255, 255, 255, 0};
+
+
+    bool createEntities();
+
+    void destroyEntities();
+
+    bool errorLight = false;
 
     enum State { WAITING_AGENT, AGENT_AVAILABLE, AGENT_CONNECTED, AGENT_DISCONNECTED };
 
@@ -25,29 +51,6 @@ public:
     rclc_support_t  support;
     rclc_executor_t executor;
     State           state = WAITING_AGENT;
-
-    std::vector<RosNode*> nodes;  // All registered ROS components
-
-    void registerNode(RosNode * node);
-
-    void initWiFi(const IPAddress& ros_agent);
-
-    void initOTA(const char* hostName, const char* password);
-
-    void update();
-
-    void updateOTA();
-
-private:
-    IPAddress agent_ip_ ;
-
-    #define RCCHECK(fn) { if(fn != RCL_RET_OK) { return false; }}
-
-    bool createEntities();
-
-    void destroyEntities();
-
-    bool errorLight = false;
 
 };
 

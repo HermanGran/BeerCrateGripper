@@ -119,7 +119,7 @@ public:
      *
      * @return a pointer to the AccelStepper
      */
-    AccelStepper* getAccelStepper();
+    [[nodiscard]] AccelStepper* getAccelStepper();
 
     /**
      * @brief A boolean value that is updated if the motor is running or not

@@ -15,26 +15,28 @@ void MicroRosConnection::registerNode(RosNode *node) {
 }
 
 
-void MicroRosConnection::initWiFi(const IPAddress& ros_agent) {
+void MicroRosConnection::initWiFi(const char* ssid, const char* password, const IPAddress& ros_agent) {
+    ssid_ = ssid;
+    password_ = password;
     agent_ip_ = ros_agent;
     delay(3000);
+
     pinMode(LED_GREEN, OUTPUT);
     pinMode(LED_RED, OUTPUT);
     digitalWrite(LED_RED, LOW);
 
-    const IPAddress localIP(192, 168, 0, 104);
-    const IPAddress gateway(192, 168, 0, 1);
-    const IPAddress subnet(255, 255, 255, 0);
-
     WiFi.config(localIP, gateway, subnet);
 
+    // Tip from claude to const_cast ssid and password to keep const correctness elsewhere
     set_microros_wifi_transports(
-        WIFI_SSID,
-        WIFI_PASSWORD,
+        const_cast<char*>(ssid_),
+        const_cast<char*>(password_),
         agent_ip_,
-        AGENT_PORT
+        agent_port_
     );
 
+    WiFi.setAutoReconnect(true);
+    WiFi.setSleep(false);
 }
 
 void MicroRosConnection::initOTA(const char *hostName, const char *password) {
@@ -69,7 +71,6 @@ void MicroRosConnection::updateOTA() {
 
     if (WiFi.status() != WL_CONNECTED) {
         logger.logf("WiFi lost, reconnecting...");
-        WiFi.reconnect();
         digitalWrite(LED_RED, LOW);
         delay(1000);
         return;
@@ -112,7 +113,7 @@ void MicroRosConnection::update() {
 
         case AGENT_DISCONNECTED:
             destroyEntities();
-            set_microros_wifi_transports(WIFI_SSID, WIFI_PASSWORD, agent_ip_, AGENT_PORT);
+            set_microros_wifi_transports(const_cast<char*>(ssid_), const_cast<char*>(password_), agent_ip_, agent_port_);
             state = WAITING_AGENT;
             break;
     }
@@ -125,7 +126,7 @@ bool MicroRosConnection::createEntities() {
     if (rcl_init_options_init(&init_options, allocator) != RCL_RET_OK) {
         logger.logf("FAIL: rcl_init_options_init"); return false;
     }
-    if (rcl_init_options_set_domain_id(&init_options, ROS_DOMAIN_ID) != RCL_RET_OK) {
+    if (rcl_init_options_set_domain_id(&init_options, domain_id_) != RCL_RET_OK) {
         logger.logf("FAIL: set_domain_id");
         rcl_init_options_fini(&init_options);
         return false;

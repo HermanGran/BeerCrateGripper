@@ -81,21 +81,21 @@ public:
      *
      * @return A reference of the StepperMotor object.
      */
-    StepperMotor& getStepper();
+    [[nodiscard]] StepperMotor& getStepper();
 
     /**
      * @brief Getter function for the current sensor object within this class.
      *
      * @return A reference of the CurrentSensor object.
      */
-    CurrentSensor& getCurrentSensor();
+    [[nodiscard]] CurrentSensor& getCurrentSensor();
 
     /**
      * @brief Getter function for the limit switch object within this class
      *
      * @return A reference of the LimitSwitch object
      */
-    LimitSwitch& getLimitSwitch();
+    [[nodiscard]] LimitSwitch& getLimitSwitch();
 
     // Gripper states
     enum class GripperState {

@@ -5,15 +5,13 @@
 #ifndef BEERCRATEGRIPPER_LIMITSWITCH_HPP
 #define BEERCRATEGRIPPER_LIMITSWITCH_HPP
 
-#include <Arduino.h>
-
 class LimitSwitch {
 public:
     explicit LimitSwitch(int pin);
 
-    void init() const;
+    void init() const noexcept;
 
-    bool isPressed() const;
+    bool isPressed() const noexcept;
 
 private:
     int pin_;
