@@ -7,18 +7,18 @@
 // Constructor takes in pins for the motor driver and the current sensor
 StepperMotor::StepperMotor(const int EN_PIN, const int DIR_PIN, const int STEP_PIN)
     :   stepper_(AccelStepper::DRIVER, STEP_PIN, DIR_PIN),
-        EN_PIN_(EN_PIN),
-        DIR_PIN_(DIR_PIN),
-        STEP_PIN_(STEP_PIN)
+        enPin_(EN_PIN),
+        dirPin_(DIR_PIN),
+        stepPin_(STEP_PIN)
 {}
 
 // Initialization function, initializes the pins for the motor driver and sets the speeds and acceleration of the motor.
 void StepperMotor::init() {
-    pinMode(EN_PIN_, OUTPUT);
-    digitalWrite(EN_PIN_, LOW);   // TMC2208 enabled
+    pinMode(enPin_, OUTPUT);
+    digitalWrite(dirPin_, LOW);   // TMC2208 enabled
     stepper_.setMaxSpeed(4000);      // steps per second
     stepper_.setAcceleration(2000);  // steps per second^2
-    stepper_.setEnablePin(EN_PIN_);
+    stepper_.setEnablePin(enPin_);
     stepper_.setPinsInverted(false, false, true);
     stepper_.disableOutputs();
 }

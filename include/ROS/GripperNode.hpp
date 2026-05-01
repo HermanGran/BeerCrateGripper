@@ -30,12 +30,6 @@ private:
     workcell_interfaces__srv__GripperCommand_Request  request;
     workcell_interfaces__srv__GripperCommand_Response response;
 
-    rcl_publisher_t    current_pub;
-    rcl_subscription_t command_sub;
-    rcl_timer_t        timer;
-    rcl_timer_t*       timer_ptr = &timer;
-    rclc_support_t*    support_ptr = nullptr;
-
     std_msgs__msg__Float32 current_msg;
     std_msgs__msg__Bool    command_msg;
 

@@ -133,9 +133,9 @@ private:
     AccelStepper stepper_;
 
     // Pins for the motor driver
-    const int EN_PIN_;
-    const int DIR_PIN_;
-    const int STEP_PIN_;
+    const int enPin_;
+    const int dirPin_;
+    const int stepPin_;
 
     // Bool if the motor is running
     volatile bool running_ = false;

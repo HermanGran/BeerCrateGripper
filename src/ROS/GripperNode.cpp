@@ -37,7 +37,10 @@ bool GripperNode::init(rcl_node_t* node, rclc_support_t* support, rclc_executor_
 }
 
 void GripperNode::fini(rcl_node_t* node) {
-    rcl_service_fini(&service, node);
+    const rcl_ret_t rc = rcl_service_fini(&service, node);
+    if (rc != RCL_RET_OK) {
+        logger.logf("rcl_service_fini failed: %d", rc);
+    }
 }
 
 void GripperNode::service_callback(const void* req, void* res) {

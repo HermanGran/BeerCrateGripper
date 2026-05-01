@@ -26,6 +26,9 @@ public:
     static void updateOTA();
 
 private:
+    /**
+     * Wi-Fi and Micro ros members
+     */
     const char *ssid_ = nullptr;
     const char *password_ = nullptr;
     const size_t domain_id_ = 7;
@@ -39,18 +42,22 @@ private:
 
 
     bool createEntities();
-
     void destroyEntities();
 
-    bool errorLight = false;
 
-    enum State { WAITING_AGENT, AGENT_AVAILABLE, AGENT_CONNECTED, AGENT_DISCONNECTED };
+    enum class State {
+        WAITING_AGENT,
+        AGENT_AVAILABLE,
+        AGENT_CONNECTED,
+        AGENT_DISCONNECTED
+    };
 
-    rcl_node_t      node;
-    rcl_allocator_t allocator;
-    rclc_support_t  support;
-    rclc_executor_t executor;
-    State           state = WAITING_AGENT;
+    State state_ = State::WAITING_AGENT;
+
+    rcl_node_t node_ = {};
+    rclc_support_t support_ = {};
+    rclc_executor_t executor_ = {};
+    rcl_allocator_t allocator_ = {};
 
 };
 
