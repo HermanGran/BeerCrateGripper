@@ -140,7 +140,7 @@ private:
 
     // Various positions and steps
     static constexpr int stepsPerRev_ = 3200;
-    static constexpr int idlePos_ = stepsPerRev_ * 4;
+    static constexpr int idlePos_ = stepsPerRev_ * 5;
     static constexpr int latchZoneStart_ = idlePos_;
     static constexpr int tightenSteps_ = stepsPerRev_ * 0.01;
     static constexpr int fullyExtended_ = stepsPerRev_ * 7.5;

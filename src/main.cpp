@@ -15,8 +15,8 @@ MicroRosConnection mrCon;
 void setup() {
     Serial.begin(115200);
 
-    mrCon.initWiFi();
-    logger.init(IPAddress(192, 168, 0, 102), 4444);
+    mrCon.initWiFi(IPAddress(192, 168, 0, 100));
+    logger.init(IPAddress(192, 168, 0, 100), 4444);
     logger.logf("Logger started");
     mrCon.initOTA("esp32-gripper", "herman");
 

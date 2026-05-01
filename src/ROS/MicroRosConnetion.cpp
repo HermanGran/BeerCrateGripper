@@ -15,22 +15,23 @@ void MicroRosConnection::registerNode(RosNode *node) {
 }
 
 
-void MicroRosConnection::initWiFi() {
+void MicroRosConnection::initWiFi(const IPAddress& ros_agent) {
+    agent_ip_ = ros_agent;
     delay(3000);
     pinMode(LED_GREEN, OUTPUT);
     pinMode(LED_RED, OUTPUT);
     digitalWrite(LED_RED, LOW);
 
-    IPAddress localIP(192, 168, 0, 104);
-    IPAddress gateway(192, 168, 0, 1);
-    IPAddress subnet(255, 255, 255, 0);
+    const IPAddress localIP(192, 168, 0, 104);
+    const IPAddress gateway(192, 168, 0, 1);
+    const IPAddress subnet(255, 255, 255, 0);
 
     WiFi.config(localIP, gateway, subnet);
 
     set_microros_wifi_transports(
         WIFI_SSID,
         WIFI_PASSWORD,
-        IPAddress(192, 168, 0, 100),
+        agent_ip_,
         AGENT_PORT
     );
 
@@ -111,7 +112,7 @@ void MicroRosConnection::update() {
 
         case AGENT_DISCONNECTED:
             destroyEntities();
-            set_microros_wifi_transports(WIFI_SSID, WIFI_PASSWORD, IPAddress(192, 168, 0, 100), AGENT_PORT);
+            set_microros_wifi_transports(WIFI_SSID, WIFI_PASSWORD, agent_ip_, AGENT_PORT);
             state = WAITING_AGENT;
             break;
     }

@@ -30,7 +30,7 @@ public:
 
     void registerNode(RosNode * node);
 
-    void initWiFi();
+    void initWiFi(const IPAddress& ros_agent);
 
     void initOTA(const char* hostName, const char* password);
 
@@ -39,7 +39,7 @@ public:
     void updateOTA();
 
 private:
-    IPAddress agent_ip{192,168,0,100};
+    IPAddress agent_ip_ ;
 
     #define RCCHECK(fn) { if(fn != RCL_RET_OK) { return false; }}
 
