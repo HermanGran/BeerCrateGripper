@@ -81,7 +81,6 @@ public:
      *
      * @return A reference of the StepperMotor object.
      */
-    [[nodiscard]] StepperMotor& getStepper();
 
     /**
      * @brief Getter function for the current sensor object within this class.
@@ -140,8 +139,8 @@ private:
 
     // Various positions and steps
     static constexpr int stepsPerRev_ = 3200;
-    static constexpr int idlePos_ = stepsPerRev_ * 5;
-    static constexpr int latchZoneStart_ = idlePos_;
+    static constexpr int idlePosSteps_ = stepsPerRev_ * 5;
+    static constexpr int latchZoneStart_ = idlePosSteps_;
     static constexpr int tightenSteps_ = stepsPerRev_ * 0.01;
     static constexpr int fullyExtended_ = stepsPerRev_ * 7.5;
     static constexpr int homePos_ = 0;
@@ -155,6 +154,7 @@ private:
 
     // Speed used for tightening when hitting the crate
     static constexpr int tightenSpeed_ = 400;
+    static constexpr int tightenAccel_ = 500;
 
     /**
      * Struct that defines the state machine table

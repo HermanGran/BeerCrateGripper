@@ -5,10 +5,7 @@
 #ifndef BEERCRATEGRIPPER_STEPPERMOTOR_HPP
 #define BEERCRATEGRIPPER_STEPPERMOTOR_HPP
 
-#include <Arduino.h>
-#include <AccelStepper.h>
-#include <Sensors/CurrentSensor.hpp>
-
+#include <FastAccelStepper.h>
 
 /**
  * @class StepperMotor
@@ -52,7 +49,7 @@ public:
      *
      * @param speed Speed for the motor to drive with
      */
-    void setSpeed(int speed);
+    void setSpeedInHz(int speed) const;
 
     /**
      * @brief Function for setting acceleration of the stepper motor
@@ -62,7 +59,7 @@ public:
      *
      * @param acceleration Acceleration of the stepper motor
      */
-    void setAcceleration(int acceleration);
+    void setAcceleration(int acceleration) const;
 
     /**
      * @brief Function for setting a home position
@@ -70,22 +67,12 @@ public:
      * This function is used for homing the stepper motor, places the current position of the motor
      * as it's new home (0).
      */
-    void setHomePos();
+    void setHomePos() const;
 
-    /**
-     * @brief Executes the stepping motion of the stepper motor if it is currently running.
-     *
-     * This method checks if the stepper motor is in motion. If the motor is running,
-     * it calls the `run()` function of the `AccelStepper` instance to advance the motor
-     * position based on the current step instructions. It continuously monitors the
-     * remaining distance to the target. Once the motor reaches its target position and no
-     * further steps are required, it stops the motor by disabling its outputs and updates
-     * the internal `running_` flag to `false`.
-     *
-     * @note This method should be called periodically in a loop or task to ensure
-     * smooth movement and precise control of the stepper motor.
-     */
-    void run();
+    void runForward() const;
+
+    void runBackward() const;
+
 
     /**
      * @brief Stops the motion of the stepper motor.
@@ -98,7 +85,9 @@ public:
      * @note Ensure that stopping the motor does not cause abrupt operational issues such as
      * mechanical stress or position misalignments in the motor's system.
      */
-    void stop();
+    void forceStop() const;
+
+    void stopMove() const;
 
     /**
      * @brief Runs the stepper motor to a position
@@ -109,17 +98,8 @@ public:
      *
      * @param position number of steps the motor moves
      */
-    void runToPosition(int position);
+    void moveTo(int position) const;
 
-
-    /**
-     * @brief Returns the AccelStepper object
-     *
-     * Returns a pointer to the AccelStepper object, a third party library for the stepper motor driver
-     *
-     * @return a pointer to the AccelStepper
-     */
-    [[nodiscard]] AccelStepper* getAccelStepper();
 
     /**
      * @brief A boolean value that is updated if the motor is running or not
@@ -128,17 +108,18 @@ public:
      */
     bool isRunning() const;
 
+    int getPosition() const;
+
 private:
     // Objects used by this class
-    AccelStepper stepper_;
+    FastAccelStepper* stepper_ = nullptr;
+    FastAccelStepperEngine engine_ = FastAccelStepperEngine();
 
     // Pins for the motor driver
     const int enPin_;
     const int dirPin_;
     const int stepPin_;
 
-    // Bool if the motor is running
-    volatile bool running_ = false;
 };
 
 #endif //BEERCRATEGRIPPER_STEPPERMOTOR_HPP
