@@ -21,7 +21,7 @@ void setup() {
         IPAddress(192, 168, 0, 100)
         );
 
-    logger.init(IPAddress(192, 168, 0, 102), 4444);
+    logger.init(IPAddress(192, 168, 0, 103), 4444);
     logger.logf("Logger started");
     mrCon.initOTA("esp32-gripper", "herman");
 
