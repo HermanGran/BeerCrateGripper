@@ -15,6 +15,9 @@ StepperMotor::StepperMotor(const int EN_PIN, const int DIR_PIN, const int STEP_P
 void StepperMotor::init() {
     engine_.init();
     stepper_ = engine_.stepperConnectToPin(stepPin_);
+
+    pinMode(enPin_, OUTPUT);
+
     if (stepper_ == nullptr) {
         Serial.println("Failed to create stepper — pin may not support hardware timer");
         while (true) {}

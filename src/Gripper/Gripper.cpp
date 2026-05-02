@@ -20,7 +20,7 @@ void Gripper::init() {
     current_.init();
 }
 
-
+// Homing sequence, TODO: Add timeout
 void Gripper::homing() {
     // Going fast home
     stepper_.setAcceleration(2000);

@@ -18,10 +18,10 @@ void setup() {
     mrCon.initWiFi(
         "TP-Link_9538",
         "89546543",
-        IPAddress(192, 168, 0, 100)
+        IPAddress(192, 168, 0, 103)
         );
 
-    logger.init(IPAddress(192, 168, 0, 100), 4444);
+    logger.init(IPAddress(192, 168, 0, 103), 4444);
     logger.logf("Logger started");
     mrCon.initOTA("esp32-gripper", "herman");
 
