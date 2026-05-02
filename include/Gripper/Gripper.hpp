@@ -142,7 +142,7 @@ private:
     static constexpr int stepsPerRev_ = 3200;
     static constexpr int idlePos_ = stepsPerRev_ * 5;
     static constexpr int latchZoneStart_ = idlePos_;
-    static constexpr int tightenSteps_ = stepsPerRev_ * 0.01;
+    static constexpr int tightenSteps_ = stepsPerRev_ * 0;
     static constexpr int fullyExtended_ = stepsPerRev_ * 7.5;
     static constexpr int homePos_ = 0;
 
@@ -151,7 +151,7 @@ private:
 
     // Debounce: millis() timestamp of first above-threshold reading, 0 = no contact
     uint32_t contactStartMs_ = 0;
-    static constexpr uint32_t contactDebounceMs_ = 75;
+    static constexpr uint32_t contactDebounceMs_ = 50;
 
     // Speed used for tightening when hitting the crate
     static constexpr int tightenSpeed_ = 400;
