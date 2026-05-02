@@ -67,7 +67,10 @@ void StepperMotor::stopMove() const {
 
 // Runs to a position in number of steps, the number of steps is stored internally
 void StepperMotor::moveTo(const int position) const {
-    stepper_->moveTo(position);
+    const int8_t err = stepper_->moveTo(position);
+    if (err != 0) {
+        Serial.printf("FastAccelStepper moveTo(%d) error: %d\n", position, err);
+    }
 }
 
 

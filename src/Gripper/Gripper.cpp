@@ -90,6 +90,12 @@ void Gripper::moveToPosition(const int position) {
     if (stepperTaskHandle != nullptr) return;
 
     stepper_.moveTo(position);
+
+    // FastAccelStepper processes moveTo() via its engine task (core 1).
+    // Yield for one tick so the engine can start stepping before the state
+    // machine's first isRunning() check — otherwise it sees false → FAILED.
+    vTaskDelay(pdMS_TO_TICKS(20));
+
     tasksRunning_     = true;
     callerTaskHandle_ = xTaskGetCurrentTaskHandle();
 
