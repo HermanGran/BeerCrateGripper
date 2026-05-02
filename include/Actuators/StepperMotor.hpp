@@ -7,8 +7,9 @@
 
 #include <Arduino.h>
 #include <AccelStepper.h>
-#include <Sensors/CurrentSensor.hpp>
+#include <TMCStepper.h>
 
+#include "Sensors/CurrentSensor.hpp"
 
 /**
  * @class StepperMotor
@@ -29,7 +30,7 @@ public:
      * @param DIR_PIN Direction pin for the motor driver
      * @param STEP_PIN Step pin for the motor driver
      */
-    StepperMotor(int EN_PIN, int DIR_PIN, int STEP_PIN);
+    StepperMotor(int8_t EN_PIN, int8_t DIR_PIN, int8_t STEP_PIN, int8_t RX_PIN, int8_t TX_PIN);
 
     /**
      * @brief Initializes the stepper motor and its settings.
@@ -131,11 +132,15 @@ public:
 private:
     // Objects used by this class
     AccelStepper stepper_;
+    TMC2208Stepper* tmc_ = nullptr;
+    static constexpr float rSense_ = 0.11f;
 
     // Pins for the motor driver
-    const int enPin_;
-    const int dirPin_;
-    const int stepPin_;
+    const int8_t enPin_;
+    const int8_t dirPin_;
+    const int8_t stepPin_;
+    const int8_t rxPin_;
+    const int8_t txPin_;
 
     // Bool if the motor is running
     volatile bool running_ = false;
