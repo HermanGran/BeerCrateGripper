@@ -17,7 +17,7 @@ StepperMotor::StepperMotor(const int EN_PIN, const int DIR_PIN, const int STEP_P
 void StepperMotor::init() {
     engine_ = new FastAccelStepperEngine();
     engine_->init();
-    stepper_ = engine_->stepperConnectToPin(stepPin_);
+    stepper_ = engine_->stepperConnectToPin(stepPin_, DRIVER_MCPWM_PCNT);
 
     pinMode(enPin_, OUTPUT);
 
@@ -29,8 +29,7 @@ void StepperMotor::init() {
 
     stepper_->setDirectionPin(dirPin_);
     stepper_->setEnablePin(enPin_, false);  // TMC2208: EN active LOW
-    //stepper_->setAutoEnable(true);
-    stepper_->enableOutputs();
+    stepper_->setAutoEnable(true);
     setSpeedInHz(4000);
     setAcceleration(2000);
 
