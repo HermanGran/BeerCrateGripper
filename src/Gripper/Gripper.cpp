@@ -52,33 +52,21 @@ void Gripper::homing() {
 // https://www.beningo.com/158-state-machines-with-function-pointers/
 void Gripper::stepperTaskWrapper(void* param) {
     auto* g = static_cast<Gripper*>(param);
-    esp_task_wdt_add(nullptr);  // this task feeds the WDT while the idle task cannot
+
+    uint32_t lastSensorMs = 0;
 
     while (g->tasksRunning_) {
-
-        // State machine loop function
         g->Sm_Loop();
 
-        esp_task_wdt_reset();
-        taskYIELD();
+        if (millis() - lastSensorMs >= 50) {
+            lastSensorMs = millis();
+            g->getCurrentSensor().updateReading();
+            g->getCurrentSensor().printTelemetry();
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(5));
     }
 
-    esp_task_wdt_delete(nullptr);
-    xTaskNotifyGive(g->callerTaskHandle_);
-    vTaskSuspend(nullptr);
-}
-
-// Created with claude code. Prints the current measurements to the UDP logger.
-void Gripper::sensorTaskWrapper(void* param) {
-    auto* g = static_cast<Gripper*>(param);
-
-    while (g->tasksRunning_) {
-        g->getCurrentSensor().updateReading();
-        g->getCurrentSensor().printTelemetry();
-        vTaskDelay(50 / portTICK_PERIOD_MS);
-    }
-
-    // Notify the caller so it knows this task has finished and is safe to delete
     xTaskNotifyGive(g->callerTaskHandle_);
     vTaskSuspend(nullptr);
 }
@@ -99,24 +87,12 @@ void Gripper::moveToPosition(const int position) {
     tasksRunning_     = true;
     callerTaskHandle_ = xTaskGetCurrentTaskHandle();
 
-    // The stepper task on core 0 never yields long enough for the core-0 idle task
-    // to run, so the idle task can't feed the TWDT. Remove it from monitoring for
-    // the duration of the move; the stepper task feeds the TWDT itself instead.
-    const TaskHandle_t idle0 = xTaskGetIdleTaskHandleForCPU(0);
-    esp_task_wdt_delete(idle0);
+    xTaskCreatePinnedToCore(stepperTaskWrapper, "GripperTask", 8192, this, 2, &stepperTaskHandle, 1);
 
-    xTaskCreatePinnedToCore(stepperTaskWrapper, "StepperTask", 8192, this, 2, &stepperTaskHandle, 0);
-    xTaskCreatePinnedToCore(sensorTaskWrapper,  "SensorTask",  8192, this, 1, &sensorTaskHandle,  1);
-
-    ulTaskNotifyTake(pdFALSE, portMAX_DELAY);  // stepper done
-    ulTaskNotifyTake(pdFALSE, portMAX_DELAY);  // sensor done — safe to delete now
+    ulTaskNotifyTake(pdFALSE, portMAX_DELAY);
 
     vTaskDelete(stepperTaskHandle);
-    vTaskDelete(sensorTaskHandle);
     stepperTaskHandle = nullptr;
-    sensorTaskHandle  = nullptr;
-
-    esp_task_wdt_add(idle0);  // restore idle task WDT monitoring
 }
 
 void Gripper::home() {

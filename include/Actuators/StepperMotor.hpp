@@ -113,7 +113,7 @@ public:
 private:
     // Objects used by this class
     FastAccelStepper* stepper_ = nullptr;
-    FastAccelStepperEngine engine_ = FastAccelStepperEngine();
+    FastAccelStepperEngine* engine_ = nullptr;
 
     // Pins for the motor driver
     const int enPin_;

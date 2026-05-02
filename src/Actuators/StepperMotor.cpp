@@ -4,6 +4,8 @@
 
 #include "Actuators/StepperMotor.hpp"
 
+#include "Debug/Logger.hpp"
+
 // Constructor takes in pins for the motor driver and the current sensor
 StepperMotor::StepperMotor(const int EN_PIN, const int DIR_PIN, const int STEP_PIN)
     :   enPin_(EN_PIN),
@@ -13,19 +15,24 @@ StepperMotor::StepperMotor(const int EN_PIN, const int DIR_PIN, const int STEP_P
 
 // Initialization function, initializes the pins for the motor driver and sets the speeds and acceleration of the motor.
 void StepperMotor::init() {
-    engine_.init();
-    stepper_ = engine_.stepperConnectToPin(stepPin_);
+    engine_ = new FastAccelStepperEngine();
+    engine_->init();
+    stepper_ = engine_->stepperConnectToPin(stepPin_);
 
     pinMode(enPin_, OUTPUT);
 
     if (stepper_ == nullptr) {
-        Serial.println("Failed to create stepper — pin may not support hardware timer");
+        logger.logf("Failed to create stepper — pin may not support hardware timer");
         while (true) {}
     }
+    logger.logf("Stepper connected OK on pin %d", stepPin_);
 
     stepper_->setDirectionPin(dirPin_);
-    stepper_->setEnablePin(enPin_);
-    stepper_->setAutoEnable(true);
+    stepper_->setEnablePin(enPin_, true);
+    //stepper_->setAutoEnable(true);
+    stepper_->enableOutputs();
+    setSpeedInHz(4000);
+    setAcceleration(2000);
 
 }
 
@@ -65,11 +72,12 @@ void StepperMotor::stopMove() const {
 }
 
 
+
 // Runs to a position in number of steps, the number of steps is stored internally
 void StepperMotor::moveTo(const int position) const {
-    const int8_t err = stepper_->moveTo(position);
-    if (err != 0) {
-        Serial.printf("FastAccelStepper moveTo(%d) error: %d\n", position, err);
+    const MoveResultCode err = stepper_->moveTo(position);
+    if (err != MoveResultCode::OK) {
+        logger.logf("FastAccelStepper moveTo(%d) error: %d\n", position, err);
     }
 }
 

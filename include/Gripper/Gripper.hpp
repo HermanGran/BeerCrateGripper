@@ -131,10 +131,8 @@ private:
     CurrentSensor current_;
 
     TaskHandle_t stepperTaskHandle = nullptr;
-    TaskHandle_t sensorTaskHandle  = nullptr;
 
     void moveToPosition(int position);
-    static void sensorTaskWrapper(void* param);
     static void stepperTaskWrapper(void* param);
 
     // Various positions and steps
