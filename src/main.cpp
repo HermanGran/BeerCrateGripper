@@ -12,6 +12,7 @@ GripperNode gripperNode(gripper);
 UDPLogger logger;
 MicroRosConnection mrCon;
 
+
 void setup() {
     Serial.begin(115200);
 

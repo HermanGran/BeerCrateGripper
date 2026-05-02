@@ -28,7 +28,7 @@ void StepperMotor::init() {
     logger.logf("Stepper connected OK on pin %d", stepPin_);
 
     stepper_->setDirectionPin(dirPin_);
-    stepper_->setEnablePin(enPin_, true);
+    stepper_->setEnablePin(enPin_, false);  // TMC2208: EN active LOW
     //stepper_->setAutoEnable(true);
     stepper_->enableOutputs();
     setSpeedInHz(4000);
