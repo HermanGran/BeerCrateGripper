@@ -9,13 +9,23 @@
 #include <Debug/Logger.hpp>
 
 Gripper::Gripper()
-    : stepper_(5, 12, 11),
+    : stepper_(5, 12, 11, 6, 7),
       limit_(4),
       current_(2)
 {}
 
 void Gripper::init() {
     stepper_.init();
+    stepper_.setMicroStepping(8);
+
+    // Retrieving number of steps for one full rotation
+    stepsPerRev_ = stepper_.getStepsPerRevolution();
+    homePos_ = 0;
+    idlePos_ = stepsPerRev_ * 10;
+    latchZoneStart_ = idlePos_;
+    tightenSteps_ = 0;
+    fullyExtended_ = stepsPerRev_ * 15;
+
     limit_.init();
     current_.init();
 }
@@ -27,7 +37,7 @@ void Gripper::homing() {
     auto s = stepper_.getAccelStepper();
     getStepper().setSpeed(4000);
     getStepper().setAcceleration(2000);
-    s->setSpeed(-2000);
+    s->setSpeed(-4000);
 
     logger.logf("Waiting for limit switch...");
     while (!limit_.isPressed()) {
@@ -122,20 +132,20 @@ void Gripper::moveToPosition(const int position) {
 void Gripper::home() {
     gripperState_ = GripperState::RELEASING;
     getStepper().setSpeed(6500);
-    getStepper().setAcceleration(10000);
+    getStepper().setAcceleration(15000);
     moveToPosition(homePos_);
 }
 
 void Gripper::idlePos() {
     gripperState_ = GripperState::RELEASING;
     getStepper().setSpeed(6500);
-    getStepper().setAcceleration(10000);
+    getStepper().setAcceleration(15000);
     moveToPosition(idlePos_);
 }
 
 bool Gripper::latch() {
     gripperState_ = GripperState::LATCHING;
-    getStepper().setSpeed(3000);
+    getStepper().setSpeed(4500);
     getStepper().setAcceleration(6000);
     moveToPosition(fullyExtended_);
 

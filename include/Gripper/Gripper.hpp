@@ -115,7 +115,7 @@ public:
         HOMING,
         LATCH,
         HOME,
-        IDLE // Move to the idle position
+        IDLE, // Move to the idle position
     };
 
     // Gripper state, default is idle
@@ -139,12 +139,12 @@ private:
     static void stepperTaskWrapper(void* param);
 
     // Various positions and steps
-    static constexpr int stepsPerRev_ = 3200;
-    static constexpr int idlePos_ = stepsPerRev_ * 5;
-    static constexpr int latchZoneStart_ = idlePos_;
-    static constexpr int tightenSteps_ = stepsPerRev_ * 0;
-    static constexpr int fullyExtended_ = stepsPerRev_ * 7.5;
-    static constexpr int homePos_ = 0;
+    int stepsPerRev_ = 0;
+    int idlePos_ = 0;
+    int latchZoneStart_ = 0;
+    int tightenSteps_ = 0;
+    int fullyExtended_ = 0;
+    int homePos_ = 0;
 
     // Current threshold for detecting obstacles
     static constexpr float currentThreshold_ = 0.310;

@@ -29,7 +29,7 @@ public:
      * @param DIR_PIN Direction pin for the motor driver
      * @param STEP_PIN Step pin for the motor driver
      */
-    StepperMotor(int EN_PIN, int DIR_PIN, int STEP_PIN);
+    StepperMotor(int8_t enPin, int8_t dirPin, int8_t stepPin, int8_t ms1Pin, int8_t ms2Pin);
 
     /**
      * @brief Initializes the stepper motor and its settings.
@@ -128,14 +128,23 @@ public:
      */
     bool isRunning() const;
 
+    void setMicroStepping(int8_t microStepping = 8);
+
+    int getStepsPerRevolution() const;
+
 private:
     // Objects used by this class
     AccelStepper stepper_;
 
     // Pins for the motor driver
-    const int enPin_;
-    const int dirPin_;
-    const int stepPin_;
+    const int8_t enPin_;
+    const int8_t dirPin_;
+    const int8_t stepPin_;
+    const int8_t ms1Pin_;
+    const int8_t ms2Pin_;
+
+    const int fullSteps = 200;
+    int stepsPerRevolution_ = 0;
 
     // Bool if the motor is running
     volatile bool running_ = false;
