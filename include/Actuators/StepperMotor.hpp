@@ -9,8 +9,6 @@
 #include <AccelStepper.h>
 #include <TMCStepper.h>
 
-#include "Sensors/CurrentSensor.hpp"
-
 /**
  * @class StepperMotor
  * @brief Represents a stepper motor controlled using the AccelStepper library, with support for hardware initialization, speed control, position control, and acceleration management.

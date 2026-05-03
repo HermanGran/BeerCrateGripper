@@ -31,11 +31,13 @@ void StepperMotor::init() {
     tmc_->ihold(8);               // lower holding current when idle — reduces heat
     tmc_->pwm_autoscale(true);
 
+    delay(500);
+
     const uint8_t version = tmc_->version();
     if (version == 0x21) {
         logger.logf("TMC2208 UART OK — version: 0x%02X", version);
     } else {
-        logger.logf("TMC2208 UART FAILED — got: 0x%02X", version);
+        logger.logf("TMC2208 UART FAILED — got: 0x%02X, CRCerror: %d", version, (int)tmc_->CRCerror);
     }
 
 
