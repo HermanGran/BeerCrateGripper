@@ -20,8 +20,8 @@ StepperMotor::StepperMotor(const int8_t EN_PIN, const int8_t DIR_PIN, const int8
 void StepperMotor::init() {
     Serial2.begin(115200, SERIAL_8N1, rxPin_, txPin_);
 
+    // JESUS CHRIST, don't work! F@ck that annoying board
     tmc_ = new TMC2208Stepper(&Serial2, rSense_);
-
     tmc_->begin();
     tmc_->pdn_disable(true);      // required to enable UART control
     tmc_->mstep_reg_select(true); // use UART for microstepping, not MS pins
