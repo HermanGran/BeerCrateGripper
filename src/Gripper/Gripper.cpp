@@ -131,15 +131,15 @@ void Gripper::moveToPosition(const int position) {
 
 void Gripper::home() {
     gripperState_ = GripperState::RELEASING;
-    getStepper().setSpeed(6500);
-    getStepper().setAcceleration(15000);
+    getStepper().setSpeed(6100);
+    getStepper().setAcceleration(20000);
     moveToPosition(homePos_);
 }
 
 void Gripper::idlePos() {
     gripperState_ = GripperState::RELEASING;
-    getStepper().setSpeed(6500);
-    getStepper().setAcceleration(15000);
+    getStepper().setSpeed(6100);
+    getStepper().setAcceleration(20000);
     moveToPosition(idlePos_);
 }
 
