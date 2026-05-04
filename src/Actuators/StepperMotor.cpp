@@ -58,6 +58,7 @@ void StepperMotor::setHomePos() {
 // Stops the motor
 void StepperMotor::stop() {
     stepper_.stop();
+    stepper_.disableOutputs();
 }
 
 // Runs to a position in number of steps, the number of steps is stored internally

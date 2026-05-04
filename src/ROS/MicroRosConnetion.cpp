@@ -188,11 +188,12 @@ bool MicroRosConnection::createEntities() {
 }
 
 void MicroRosConnection::destroyEntities() {
+    // Set destroy timeout to 0 so fini calls don't try to reach the (already gone) agent
+    rmw_context_t* rmw_context = rcl_context_get_rmw_context(&support_.context);
+    (void) rmw_uros_set_context_entity_destroy_session_timeout(rmw_context, 0);
+
     for (auto* n : nodes) n->fini(&node_);
     rclc_executor_fini(&executor_);
-    const rcl_ret_t rc = rcl_node_fini(&node_);
-    if (rc != RCL_RET_OK) {
-        logger.logf("rcl_node_fini failed: %d", rc);
-    }
+    rcl_node_fini(&node_);
     rclc_support_fini(&support_);
 }

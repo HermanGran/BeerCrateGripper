@@ -1,5 +1,4 @@
 #include <Arduino.h>
-#include <micro_ros_platformio.h>
 
 #include <Gripper/Gripper.hpp>
 #include <Debug/Logger.hpp>

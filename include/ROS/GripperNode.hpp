@@ -14,7 +14,7 @@
 #include <rclc/service.h>
 #include <workcell_interfaces/srv/gripper_command.h>
 
-class GripperNode : public RosNode {
+class GripperNode final : public RosNode {
 public:
     explicit GripperNode(Gripper &gripper);
 
@@ -35,6 +35,7 @@ private:
 
     static GripperNode* instance;
 
+    bool serviceInited_ = false;
     char response_msg_buf[64];
 
     static void service_callback(const void* req, void* res);

@@ -24,6 +24,7 @@ bool GripperNode::init(rcl_node_t* node, rclc_support_t* support, rclc_executor_
         logger.logf("Failed to create gripper service!");
         return false;
     }
+    serviceInited_ = true;
 
     if (rclc_executor_add_service(
         executor, &service,
@@ -37,10 +38,9 @@ bool GripperNode::init(rcl_node_t* node, rclc_support_t* support, rclc_executor_
 }
 
 void GripperNode::fini(rcl_node_t* node) {
-    const rcl_ret_t rc = rcl_service_fini(&service, node);
-    if (rc != RCL_RET_OK) {
-        logger.logf("rcl_service_fini failed: %d", rc);
-    }
+    if (!serviceInited_) return;
+    serviceInited_ = false;
+    rcl_service_fini(&service, node);
 }
 
 void GripperNode::service_callback(const void* req, void* res) {

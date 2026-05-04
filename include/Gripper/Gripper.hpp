@@ -76,12 +76,6 @@ public:
      */
     void idlePos();
 
-    /**
-     * @brief Getter function for the stepper motor object within this class.
-     *
-     * @return A reference of the StepperMotor object.
-     */
-    [[nodiscard]] StepperMotor& getStepper();
 
     /**
      * @brief Getter function for the current sensor object within this class.
@@ -152,7 +146,7 @@ private:
 
     // Debounce: millis() timestamp of first above-threshold reading, 0 = no contact
     uint32_t contactStartMs_ = 0;
-    static constexpr uint32_t contactDebounceMs_ = 10;
+    static constexpr uint32_t contactDebounceMs_ = 7;
 
     // Speed used for tightening when hitting the crate
     static constexpr int tightenSpeed_ = 400;
