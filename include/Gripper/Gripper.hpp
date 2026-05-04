@@ -118,18 +118,19 @@ public:
         IDLE, // Move to the idle position
     };
 
+private:
+
     // Gripper state, default is idle
     GripperState gripperState_ = GripperState::IDLE;
     GripperAction gripperAction_ = GripperAction::IDLE;
-
-    TaskHandle_t callerTaskHandle_ = nullptr;
-    std::atomic<bool> tasksRunning_{false};
-private:
 
     // Objects used by the gripper
     StepperMotor stepper_;
     LimitSwitch limit_;
     CurrentSensor current_;
+
+    TaskHandle_t callerTaskHandle_ = nullptr;
+    std::atomic<bool> tasksRunning_{false};
 
     TaskHandle_t stepperTaskHandle = nullptr;
     TaskHandle_t sensorTaskHandle  = nullptr;
@@ -151,7 +152,7 @@ private:
 
     // Debounce: millis() timestamp of first above-threshold reading, 0 = no contact
     uint32_t contactStartMs_ = 0;
-    static constexpr uint32_t contactDebounceMs_ = 50;
+    static constexpr uint32_t contactDebounceMs_ = 10;
 
     // Speed used for tightening when hitting the crate
     static constexpr int tightenSpeed_ = 400;

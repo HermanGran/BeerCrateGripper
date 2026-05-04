@@ -16,15 +16,16 @@ Gripper::Gripper()
 
 void Gripper::init() {
     stepper_.init();
-    stepper_.setMicroStepping(8);
+    constexpr int microStepping = 8;
+    stepper_.setMicroStepping(microStepping);
 
     // Retrieving number of steps for one full rotation
-    stepsPerRev_ = stepper_.getStepsPerRevolution();
+    stepsPerRev_ = 200 * microStepping;
     homePos_ = 0;
     idlePos_ = stepsPerRev_ * 10;
     latchZoneStart_ = idlePos_;
     tightenSteps_ = 0;
-    fullyExtended_ = stepsPerRev_ * 15;
+    fullyExtended_ = stepsPerRev_ * 20;
 
     limit_.init();
     current_.init();
@@ -33,27 +34,24 @@ void Gripper::init() {
 
 void Gripper::homing() {
 
-    stepper_.getAccelStepper()->enableOutputs();
-    auto s = stepper_.getAccelStepper();
-    getStepper().setSpeed(4000);
-    getStepper().setAcceleration(2000);
-    s->setSpeed(-4000);
+    stepper_.enableOutputs();
+    stepper_.setSpeedParams(4000, 2000);
+    stepper_.setSpeed(-4000);
 
     logger.logf("Waiting for limit switch...");
     while (!limit_.isPressed()) {
-        s->runSpeed();
+        stepper_.runSpeed();
     }
 
     logger.logf("Limit switch pressed!");
+    stepper_.setSpeed(400);
 
-    s->setSpeed(400);
     while (limit_.isPressed()) {
-
-        s->runSpeed();
+        stepper_.runSpeed();
     }
 
     stepper_.setHomePos();
-    stepper_.getAccelStepper()->disableOutputs();
+    stepper_.disableOutputs();
     gripperState_ = GripperState::HOME;
 }
 
@@ -85,8 +83,8 @@ void Gripper::sensorTaskWrapper(void* param) {
 
     while (g->tasksRunning_) {
         g->getCurrentSensor().updateReading();
-        g->getCurrentSensor().printTelemetry();
-        vTaskDelay(50 / portTICK_PERIOD_MS);
+        //g->getCurrentSensor().printTelemetry();
+        vTaskDelay(1 / portTICK_PERIOD_MS);
     }
 
     // Notify the caller so it knows this task has finished and is safe to delete
@@ -100,10 +98,8 @@ void Gripper::sensorTaskWrapper(void* param) {
 void Gripper::moveToPosition(const int position) {
     if (stepperTaskHandle != nullptr) return;
 
-    auto* g = getStepper().getAccelStepper();
-
     getStepper().stop();
-    g->setCurrentPosition(g->currentPosition());
+    stepper_.setCurrentPosition(stepper_.getPosition());
 
     stepper_.runToPosition(position);
     tasksRunning_     = true;
@@ -131,21 +127,21 @@ void Gripper::moveToPosition(const int position) {
 
 void Gripper::home() {
     gripperState_ = GripperState::RELEASING;
-    getStepper().setSpeed(6050);
+    getStepper().setMaxSpeed(6000);
     getStepper().setAcceleration(25000);
     moveToPosition(homePos_);
 }
 
 void Gripper::idlePos() {
     gripperState_ = GripperState::RELEASING;
-    getStepper().setSpeed(6050);
+    getStepper().setMaxSpeed(6000);
     getStepper().setAcceleration(25000);
     moveToPosition(idlePos_);
 }
 
 bool Gripper::latch() {
     gripperState_ = GripperState::LATCHING;
-    getStepper().setSpeed(4500);
+    getStepper().setMaxSpeed(4500);
     getStepper().setAcceleration(6000);
     moveToPosition(fullyExtended_);
 
@@ -188,7 +184,6 @@ void Gripper::Sm_Loop() {
         logger.logf("Invalid gripper state: %d", gripperState_);
         gripperState_ = GripperState::FAILED;
     }
-
 }
 
 // State machine Homeing state
@@ -200,7 +195,7 @@ void Gripper::Sm_Home() {
 void Gripper::Sm_Latching() {
     getStepper().run();
 
-    const int currentPos = getStepper().getAccelStepper()->currentPosition();
+    const int currentPos = getStepper().getPosition();
     const bool contact = getCurrentSensor().isLatched(currentThreshold_);
     const bool inLatchZone = currentPos > latchZoneStart_;
 
@@ -211,13 +206,11 @@ void Gripper::Sm_Latching() {
             contactStartMs_ = 0;
             if (!inLatchZone) {
                 getStepper().stop();
-                getStepper().getAccelStepper()->moveTo(currentPos);
                 gripperState_ = GripperState::OBSTACLE_DETECTED;
             } else {
                 logger.logf("Contact in latch zone at pos %d — tightening", currentPos);
-                getStepper().setSpeed(tightenSpeed_);
-                getStepper().setAcceleration(500);
-                getStepper().getAccelStepper()->moveTo(currentPos + tightenSteps_);
+                getStepper().setSpeedParams(tightenSpeed_, 1000);
+                getStepper().runToPosition(currentPos + tightenSteps_);
                 gripperState_ = GripperState::TIGHTENING;
             }
         }
@@ -233,8 +226,23 @@ void Gripper::Sm_Latching() {
 void Gripper::Sm_Releasing() {
     getStepper().run();
 
+    const bool contact = getCurrentSensor().isLatched(currentThreshold_ + 0.2);
+
+    if (contact) {
+        if (contactStartMs_ == 0) contactStartMs_ = millis();
+
+        if (millis() - contactStartMs_ >= contactDebounceMs_) {
+            getStepper().stop();
+            gripperState_ = GripperState::OBSTACLE_DETECTED;
+        }
+
+    } else {
+        contactStartMs_ = 0;
+    }
+
     if (!getStepper().isRunning()) {
         gripperState_ = GripperState::IDLE;
+
     }
 }
 

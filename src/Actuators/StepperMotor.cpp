@@ -27,24 +27,32 @@ void StepperMotor::init() {
     stepper_.disableOutputs();
 }
 
+void StepperMotor::setSpeed(const float speed) {
+    stepper_.setSpeed(speed);
+}
+
 // Sets the max speed of the motor
-void StepperMotor::setSpeed(const int speed) {
+void StepperMotor::setMaxSpeed(const float speed) {
     stepper_.setMaxSpeed(speed);
 }
 
 // Sets the acceleration of the motor
-void StepperMotor::setAcceleration(const int acceleration) {
+void StepperMotor::setAcceleration(const float acceleration) {
     stepper_.setAcceleration(acceleration);
+}
+
+void StepperMotor::setSpeedParams(const float speed, const float acceleration) {
+    stepper_.setMaxSpeed(speed);
+    stepper_.setAcceleration(acceleration);
+}
+
+void StepperMotor::runSpeed() {
+    stepper_.runSpeed();
 }
 
 // Sets the current position of the motor as the new home
 void StepperMotor::setHomePos() {
     stepper_.setCurrentPosition(0);
-}
-
-// Returns a reference to the accelStepper object
-AccelStepper* StepperMotor::getAccelStepper() {
-    return &stepper_;
 }
 
 // Stops the motor
@@ -56,28 +64,25 @@ void StepperMotor::stop() {
 void StepperMotor::runToPosition(const int position) {
     stepper_.enableOutputs();
     stepper_.moveTo(position);
-    running_ = true;
 }
 
 // Runs loop function. Must be called in a loop
 void StepperMotor::run() {
-    if (running_) {
+
+    if (stepper_.isRunning()) {
         stepper_.run();
         if (stepper_.distanceToGo() == 0) {
-            running_ = false;
             stepper_.disableOutputs();
         }
     }
 }
 
 // Returns a boolean value if the motor is running
-bool StepperMotor::isRunning() const {
-    return running_;
+bool StepperMotor::isRunning() {
+    return stepper_.isRunning();
 }
 
-void StepperMotor::setMicroStepping(const int8_t microStepping) {
-
-    stepsPerRevolution_ = fullSteps * microStepping;
+void StepperMotor::setMicroStepping(const int8_t microStepping) const {
 
     switch (microStepping) {
         case 2:
@@ -100,6 +105,18 @@ void StepperMotor::setMicroStepping(const int8_t microStepping) {
     }
 }
 
-int StepperMotor::getStepsPerRevolution() const {
-    return stepsPerRevolution_;
+void StepperMotor::enableOutputs() {
+    stepper_.enableOutputs();
+}
+
+void StepperMotor::disableOutputs() {
+    stepper_.disableOutputs();
+}
+
+int StepperMotor::getPosition() {
+    return stepper_.currentPosition();
+}
+
+void StepperMotor::setCurrentPosition(const int position) {
+    stepper_.setCurrentPosition(position);
 }

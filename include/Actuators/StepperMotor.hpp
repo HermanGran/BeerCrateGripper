@@ -44,6 +44,8 @@ public:
      */
     void init();
 
+    void setSpeed(float speed);
+
     /**
      * @brief Function for manually setting the motor soeed
      *
@@ -52,7 +54,7 @@ public:
      *
      * @param speed Speed for the motor to drive with
      */
-    void setSpeed(int speed);
+    void setMaxSpeed(float speed);
 
     /**
      * @brief Function for setting acceleration of the stepper motor
@@ -62,7 +64,7 @@ public:
      *
      * @param acceleration Acceleration of the stepper motor
      */
-    void setAcceleration(int acceleration);
+    void setAcceleration(float acceleration);
 
     /**
      * @brief Function for setting a home position
@@ -111,26 +113,25 @@ public:
      */
     void runToPosition(int position);
 
-
-    /**
-     * @brief Returns the AccelStepper object
-     *
-     * Returns a pointer to the AccelStepper object, a third party library for the stepper motor driver
-     *
-     * @return a pointer to the AccelStepper
-     */
-    [[nodiscard]] AccelStepper* getAccelStepper();
-
     /**
      * @brief A boolean value that is updated if the motor is running or not
      *
      * @return Boolean status, running or stopped
      */
-    bool isRunning() const;
+    bool isRunning();
 
-    void setMicroStepping(int8_t microStepping = 8);
+    void setMicroStepping(int8_t microStepping = 8) const;
 
-    int getStepsPerRevolution() const;
+    void enableOutputs();
+    void disableOutputs();
+
+    void setSpeedParams(float speed, float acceleration);
+
+    void runSpeed();
+
+    int getPosition();
+
+    void setCurrentPosition(int position);
 
 private:
     // Objects used by this class
@@ -145,9 +146,6 @@ private:
 
     const int fullSteps = 200;
     int stepsPerRevolution_ = 0;
-
-    // Bool if the motor is running
-    volatile bool running_ = false;
 };
 
 #endif //BEERCRATEGRIPPER_STEPPERMOTOR_HPP
