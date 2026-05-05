@@ -142,11 +142,11 @@ private:
     int homePos_ = 0;
 
     // Current threshold for detecting obstacles
-    static constexpr float currentThreshold_ = 0.300;
+    static constexpr float currentThreshold_ = 0.310;
 
     // Debounce: millis() timestamp of first above-threshold reading, 0 = no contact
     uint32_t contactStartMs_ = 0;
-    static constexpr uint32_t contactDebounceMs_ = 7;
+    static constexpr uint32_t contactDebounceMs_ = 5;
 
     // Speed used for tightening when hitting the crate
     static constexpr int tightenSpeed_ = 400;

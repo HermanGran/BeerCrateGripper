@@ -139,7 +139,7 @@ void Gripper::idlePos() {
 
 bool Gripper::latch() {
     gripperState_ = GripperState::LATCHING;
-    stepper_.setSpeedParams(6500, 4000);
+    stepper_.setSpeedParams(6500, 13000);
     moveToPosition(fullyExtended_);
 
     switch (gripperState_) {
@@ -201,10 +201,9 @@ void Gripper::Sm_Latching() {
                 stepper_.stop();
                 gripperState_ = GripperState::OBSTACLE_DETECTED;
             } else {
-                logger.logf("Contact in latch zone at pos %d — tightening", currentPos);
-                stepper_.setSpeedParams(tightenSpeed_, 1000);
-                stepper_.runToPosition(currentPos + tightenSteps_);
-                gripperState_ = GripperState::TIGHTENING;
+                logger.logf("Contact in latch zone at pos %d — latched", currentPos);
+                stepper_.hardStop();
+                gripperState_ = GripperState::LATCHED;
             }
         }
     } else {
@@ -219,7 +218,7 @@ void Gripper::Sm_Latching() {
 void Gripper::Sm_Releasing() {
     stepper_.run();
 
-    const bool contact = getCurrentSensor().isLatched(currentThreshold_ + 0.2);
+    const bool contact = getCurrentSensor().isLatched(currentThreshold_ + 0.4);
 
     if (contact) {
         if (contactStartMs_ == 0) contactStartMs_ = millis();

@@ -103,6 +103,21 @@ public:
     void stop();
 
     /**
+     * @brief Decelerates to a stop without disabling outputs (retains holding torque).
+     * Use this for mid-move stops where the motor must hold position after stopping.
+     * Unlike stop(), outputs stay enabled so the motor doesn't lose grip.
+     */
+    void decelerate();
+
+    /**
+     * @brief Immediately halts step generation and holds position.
+     * Sets the AccelStepper target to the current position so distanceToGo()==0
+     * on the very next run() call. No deceleration — use when contact is detected
+     * and physical travel must stop as soon as possible. Outputs stay enabled.
+     */
+    void hardStop();
+
+    /**
      * @brief Runs the stepper motor to a position
      *
      * This function takes in a position in number of steps to move. The position is internally stored. It utilizes a smooth stop and start.

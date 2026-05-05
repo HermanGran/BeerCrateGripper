@@ -55,10 +55,20 @@ void StepperMotor::setHomePos() {
     stepper_.setCurrentPosition(0);
 }
 
-// Stops the motor
+// Stops the motor and disables outputs (no holding torque)
 void StepperMotor::stop() {
     stepper_.stop();
     stepper_.disableOutputs();
+}
+
+// Decelerates to a stop, outputs stay enabled (holding torque maintained)
+void StepperMotor::decelerate() {
+    stepper_.stop();
+}
+
+// Immediately halts step generation by setting target == current position
+void StepperMotor::hardStop() {
+    stepper_.setCurrentPosition(stepper_.currentPosition());
 }
 
 // Runs to a position in number of steps, the number of steps is stored internally
