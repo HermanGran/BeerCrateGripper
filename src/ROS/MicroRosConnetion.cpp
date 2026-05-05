@@ -19,7 +19,7 @@ void MicroRosConnection::initWiFi(const char* ssid, const char* password, const 
     ssid_ = ssid;
     password_ = password;
     agent_ip_ = ros_agent;
-    delay(3000);
+    delay(1000);
 
     pinMode(LED_GREEN, OUTPUT);
     pinMode(LED_RED, OUTPUT);

@@ -142,7 +142,7 @@ private:
     int homePos_ = 0;
 
     // Current threshold for detecting obstacles
-    static constexpr float currentThreshold_ = 0.310;
+    static constexpr float currentThreshold_ = 0.300;
 
     // Debounce: millis() timestamp of first above-threshold reading, 0 = no contact
     uint32_t contactStartMs_ = 0;

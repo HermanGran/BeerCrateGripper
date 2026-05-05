@@ -127,19 +127,19 @@ void Gripper::moveToPosition(const int position) {
 
 void Gripper::home() {
     gripperState_ = GripperState::RELEASING;
-    stepper_.setSpeedParams(6900, 25000);
+    stepper_.setSpeedParams(6500, 18000);
     moveToPosition(homePos_);
 }
 
 void Gripper::idlePos() {
     gripperState_ = GripperState::RELEASING;
-    stepper_.setSpeedParams(6900, 25000);
+    stepper_.setSpeedParams(6500, 18000);
     moveToPosition(idlePos_);
 }
 
 bool Gripper::latch() {
     gripperState_ = GripperState::LATCHING;
-    stepper_.setSpeedParams(6500, 10000);
+    stepper_.setSpeedParams(6500, 4000);
     moveToPosition(fullyExtended_);
 
     switch (gripperState_) {
