@@ -1,0 +1,252 @@
+@startuml BeerCrateGripper
+
+skinparam classAttributeIconSize 0
+skinparam classFontStyle bold
+skinparam packageStyle rectangle
+skinparam linetype ortho
+skinparam nodesep 60
+skinparam ranksep 80
+
+' ─────────────────────────────────────────
+'  Row 1: Debug | Sensors | Actuators
+' ─────────────────────────────────────────
+together {
+    package "Debug" {
+        class UDPLogger {
+            - udp_   : WiFiUDP
+            - pcIP_  : IPAddress
+            - port_  : uint16_t
+            --
+            + init(ip, port) : void
+            + log(msg : const char*) : void
+            + logf(format : const char*, ...) : void
+        }
+        note "Global instance:\nextern UDPLogger logger" as N_logger
+        UDPLogger .. N_logger
+    }
+
+    package "Sensors" {
+        class LimitSwitch {
+            - pin_ : int
+            --
+            + LimitSwitch(pin : int)
+            + init() : void
+            + isPressed() : bool
+        }
+
+        class CurrentSensor {
+            - pin_         : int
+            - vcc_         : float
+            - sensitivity_ : float
+            - samples_     : int
+            - zeroOffset_  : float
+            - currentA_    : atomic<float>
+            --
+            + init() : void
+            + readCurrentA() : float
+            + isLatched(thresholdA : float) : bool
+            + updateReading() : void
+            + getLatestReading() : float
+            + printTelemetry() : void
+            - sampleAvgV() : float
+        }
+    }
+
+    package "Actuators" {
+        class StepperMotor {
+            - stepper_           : AccelStepper
+            - enPin_             : int8_t
+            - dirPin_            : int8_t
+            - stepPin_           : int8_t
+            - ms1Pin_            : int8_t
+            - ms2Pin_            : int8_t
+            - fullSteps          : int
+            - stepsPerRevolution_: int
+            --
+            + init() : void
+            + setSpeed(speed : float) : void
+            + setMaxSpeed(speed : float) : void
+            + setAcceleration(acc : float) : void
+            + setMicroStepping(ms : int8_t) : void
+            + runToPosition(position : int) : void
+            + run() : void
+            + stop() : void
+            + hardStop() : void
+            + isRunning() : bool
+            + setHomePos() : void
+            + getPosition() : int
+            + enableOutputs() : void
+            + disableOutputs() : void
+        }
+    }
+}
+
+' ─────────────────────────────────────────
+'  Row 2: Gripper (center)
+' ─────────────────────────────────────────
+package "Gripper" {
+    together {
+        enum GripperState {
+            IDLE
+            HOME
+            LATCHING
+            OBSTACLE_DETECTED
+            TIGHTENING
+            LATCHED
+            FAILED
+            RELEASING
+            NUM_STATES
+        }
+
+        enum GripperAction {
+            HOMING
+            LATCH
+            HOME
+            IDLE
+        }
+
+        class StatemachineType <<struct>> {
+            + state   : GripperState
+            + handler : void (Gripper::*)()
+        }
+    }
+
+    class Gripper {
+        - stepper_           : StepperMotor
+        - limit_             : LimitSwitch
+        - current_           : CurrentSensor
+        - gripperState_      : GripperState
+        - gripperAction_     : GripperAction
+        - callerTaskHandle_  : TaskHandle_t
+        - tasksRunning_      : atomic<bool>
+        - stepsPerRev_       : int
+        - idlePos_           : int
+        - latchZoneStart_    : int
+        - tightenSteps_      : int
+        - fullyExtended_     : int
+        - homePos_           : int
+        - currentThreshold_  : float {const}
+        - contactStartMs_    : uint32_t
+        - contactDebounceMs_ : uint32_t {const}
+        - tightenSpeed_      : int {const}
+        - stateMachine_      : array<StatemachineType, NUM_STATES>
+        --
+        + init() : void
+        + homing() : void
+        + latch() : bool
+        + home() : void
+        + idlePos() : void
+        + getCurrentSensor() : CurrentSensor&
+        + getLimitSwitch() : LimitSwitch&
+        --
+        - moveToPosition(position : int) : void
+        - {static} stepperTaskWrapper(param : void*) : void
+        - {static} sensorTaskWrapper(param : void*) : void
+        - Sm_Loop() : void
+        - Sm_Idle() : void
+        - Sm_Home() : void
+        - Sm_Latching() : void
+        - Sm_Releasing() : void
+        - Sm_ObstacleDetected() : void
+        - Sm_Tighten() : void
+        - Sm_Latched() : void
+        - Sm_Failed() : void
+    }
+
+    Gripper *-- StepperMotor    : "stepper_"
+    Gripper *-- LimitSwitch     : "limit_"
+    Gripper *-- CurrentSensor   : "current_"
+    Gripper "1" *-- "NUM_STATES" StatemachineType : "stateMachine_[]"
+    Gripper ..> GripperState    : uses
+    Gripper ..> GripperAction   : uses
+    StatemachineType --> GripperState
+}
+
+' ─────────────────────────────────────────
+'  Row 3: ROS
+' ─────────────────────────────────────────
+package "ROS" {
+    abstract class RosNode {
+        + {abstract} init(node, support, executor) : bool
+        + {abstract} fini(node : rcl_node_t*) : void
+        + executor_handles() : int
+    }
+
+    enum "MicroRosConnection::State" as MRC_State {
+        WAITING_AGENT
+        AGENT_AVAILABLE
+        AGENT_CONNECTED
+        AGENT_DISCONNECTED
+    }
+
+    class MicroRosConnection {
+        + nodes           : vector<RosNode*>
+        - ssid_           : const char*
+        - password_       : const char*
+        - domain_id_      : size_t
+        - agent_port_     : size_t
+        - agent_ip_       : IPAddress
+        - state_          : State
+        - node_           : rcl_node_t
+        - support_        : rclc_support_t
+        - executor_       : rclc_executor_t
+        - allocator_      : rcl_allocator_t
+        --
+        + registerNode(node : RosNode*) : void
+        + initWiFi(ssid, password, ros_agent) : void
+        + {static} initOTA(hostName, password) : void
+        + update() : void
+        + {static} updateOTA() : void
+        - createEntities() : bool
+        - destroyEntities() : void
+    }
+
+    class GripperNode {
+        - gripper_         : Gripper&
+        - service          : rcl_service_t
+        - request          : GripperCommand_Request
+        - response         : GripperCommand_Response
+        - current_msg      : std_msgs__msg__Float32
+        - command_msg      : std_msgs__msg__Bool
+        - {static} instance: GripperNode*
+        - serviceInited_   : bool
+        - response_msg_buf : char[64]
+        --
+        + GripperNode(gripper : Gripper&)
+        + executor_handles() : int
+        + init(node, support, executor) : bool
+        + fini(node : rcl_node_t*) : void
+        - {static} service_callback(req, res) : void
+    }
+
+    RosNode <|-- GripperNode
+    GripperNode o-- Gripper         : "gripper_ (ref)"
+    MicroRosConnection o-- RosNode  : "nodes[]"
+    MicroRosConnection ..> MRC_State: uses
+}
+
+' ─────────────────────────────────────────
+'  Row 4: Main (bottom)
+' ─────────────────────────────────────────
+package "main" {
+    class "main.cpp" as Main <<(F,orchid) file>> {
+        + setup() : void
+        + loop() : void
+    }
+
+    Main *-- Gripper            : "gripper"
+    Main *-- GripperNode        : "gripperNode"
+    Main *-- UDPLogger          : "logger"
+    Main *-- MicroRosConnection : "mrCon"
+}
+
+' ─────────────────────────────────────────
+'  Layout hints: force top-to-bottom flow
+' ─────────────────────────────────────────
+Debug -[hidden]right-> Sensors
+Sensors -[hidden]right-> Actuators
+Sensors -[hidden]down-> Gripper
+Gripper -[hidden]down-> ROS
+ROS -[hidden]down-> main
+
+@enduml

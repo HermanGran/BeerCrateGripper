@@ -142,11 +142,21 @@ private:
     int homePos_ = 0;
 
     // Current threshold for detecting obstacles
-    static constexpr float currentThreshold_ = 0.310;
+    static constexpr float currentThreshold_ = 0.250;
 
     // Debounce: millis() timestamp of first above-threshold reading, 0 = no contact
     uint32_t contactStartMs_ = 0;
-    static constexpr uint32_t contactDebounceMs_ = 5;
+    static constexpr uint32_t contactDebounceMs_ = 10;
+
+    // Grace period at the start of LATCHING: skip current check while the motor
+    // accelerates — the startup transient would otherwise trigger a false contact.
+    uint32_t latchStartMs_ = 0;
+    static constexpr uint32_t latchGracePeriodMs_ = 500;
+
+    // Grace period at the start of RELEASING: skip obstacle check while current EMA
+    // decays from the latch reading and the motor startup transient passes.
+    uint32_t releaseStartMs_ = 0;
+    static constexpr uint32_t releaseGracePeriodMs_ = 500;
 
     // Speed used for tightening when hitting the crate
     static constexpr int tightenSpeed_ = 400;

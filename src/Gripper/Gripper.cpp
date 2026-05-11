@@ -186,31 +186,42 @@ void Gripper::Sm_Home() {
 
 // State machine Latching state
 void Gripper::Sm_Latching() {
-    stepper_.run();
-
     const int currentPos = stepper_.getPosition();
-    const bool contact = getCurrentSensor().isLatched(currentThreshold_);
     const bool inLatchZone = currentPos > latchZoneStart_;
 
-    if (contact) {
-        if (contactStartMs_ == 0) contactStartMs_ = millis();
-
+    if (contactStartMs_ != 0) {
+        // Motor already stopped on first contact. Do NOT re-read current here:
+        // the motor is no longer pushing, so current drops below threshold even
+        // though physical contact still exists. Just wait the fixed debounce
+        // window, then decide by position alone.
         if (millis() - contactStartMs_ >= contactDebounceMs_) {
             contactStartMs_ = 0;
+            latchStartMs_   = 0;
             if (!inLatchZone) {
-                stepper_.stop();
                 gripperState_ = GripperState::OBSTACLE_DETECTED;
             } else {
                 logger.logf("Contact in latch zone at pos %d — latched", currentPos);
-                stepper_.hardStop();
                 gripperState_ = GripperState::LATCHED;
             }
         }
-    } else {
-        contactStartMs_ = 0;
-        if (!stepper_.isRunning()) {
-            gripperState_ = GripperState::FAILED;
-        }
+        return;
+    }
+
+    // Skip current check during the startup grace period: the motor acceleration
+    // transient spikes current above the threshold before touching anything.
+    if (latchStartMs_ == 0) latchStartMs_ = millis();
+    const bool inGracePeriod = (millis() - latchStartMs_) < latchGracePeriodMs_;
+
+    if (!inGracePeriod && getCurrentSensor().isLatched(currentThreshold_)) {
+        stepper_.hardStop();
+        contactStartMs_ = millis();
+        return;
+    }
+
+    stepper_.run();
+    if (!stepper_.isRunning()) {
+        latchStartMs_ = 0;
+        gripperState_ = GripperState::FAILED;
     }
 }
 
@@ -218,23 +229,34 @@ void Gripper::Sm_Latching() {
 void Gripper::Sm_Releasing() {
     stepper_.run();
 
-    const bool contact = getCurrentSensor().isLatched(currentThreshold_ + 0.4);
+    if (releaseStartMs_ == 0) releaseStartMs_ = millis();
 
-    if (contact) {
-        if (contactStartMs_ == 0) contactStartMs_ = millis();
+    // Skip obstacle check for the first releaseGracePeriodMs_ ms:
+    // lets the current EMA decay from the latch reading and the motor
+    // startup transient pass before we start watching for real obstacles.
+    const bool inGracePeriod = (millis() - releaseStartMs_) < releaseGracePeriodMs_;
 
-        if (millis() - contactStartMs_ >= contactDebounceMs_) {
-            stepper_.stop();
-            gripperState_ = GripperState::OBSTACLE_DETECTED;
+    if (!inGracePeriod) {
+        const bool contact = getCurrentSensor().isLatched(currentThreshold_ + 0.4);
+
+        if (contact) {
+            if (contactStartMs_ == 0) contactStartMs_ = millis();
+
+            if (millis() - contactStartMs_ >= contactDebounceMs_) {
+                contactStartMs_ = 0;
+                releaseStartMs_ = 0;
+                stepper_.stop();
+                gripperState_ = GripperState::OBSTACLE_DETECTED;
+                return;  // do not fall through to isRunning check below
+            }
+        } else {
+            contactStartMs_ = 0;
         }
-
-    } else {
-        contactStartMs_ = 0;
     }
 
     if (!stepper_.isRunning()) {
+        releaseStartMs_ = 0;
         gripperState_ = GripperState::IDLE;
-
     }
 }
 
