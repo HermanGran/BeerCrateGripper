@@ -9,7 +9,7 @@
 #include <Debug/Logger.hpp>
 
 Gripper::Gripper()
-    : stepper_(5, 12, 11, 9, 8),
+    : stepper_(5, 12, 11, 8, 9),
       limit_(4),
       current_(2)
 {}

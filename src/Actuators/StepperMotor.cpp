@@ -174,14 +174,18 @@ void StepperMotor::runUARTDiagnostic() {
 }
 
 void StepperMotor::init() {
+    // Enable chip FIRST before any UART communication
+    pinMode(enPin_, OUTPUT);
+    digitalWrite(enPin_, LOW);   // LOW = enabled on TMC2208
+    delay(100);                  // give chip time to wake up
+
     Serial2.begin(115200, SERIAL_8N1, rxPin_, txPin_);
     delay(100);
 
-    // Run hardware diagnostic first, before any library calls
+    // Run diagnostic
     runUARTDiagnostic();
 
-    // Only proceed with library init if diagnostic passes
-    // (comment this out if diagnostic shows failure until hardware is fixed)
+    // Library init
     tmc_ = new TMC2208Stepper(&Serial2, rSense_);
     tmc_->begin();
     tmc_->pdn_disable(true);
@@ -194,19 +198,20 @@ void StepperMotor::init() {
 
     const uint8_t version = tmc_->version();
     if (version == 0x20) {
-        logger.logf("TMC2208 library OK — version: 0x%02X", version);
+        logger.logf("TMC2208 UART OK — version: 0x%02X", version);
     } else {
-        logger.logf("TMC2208 library FAILED — got: 0x%02X, CRCerror: %d",
+        logger.logf("TMC2208 UART FAILED ss— got: 0x%02X, CRCerror: %d",
                     version, (int)tmc_->CRCerror);
     }
 
-    pinMode(enPin_, OUTPUT);
-    digitalWrite(dirPin_, LOW);
+    // NOW it is safe to set up AccelStepper and disable outputs
+    // The UART config is stored in the chip registers
+    // Disabling outputs only cuts motor current, not UART or registers
     stepper_.setMaxSpeed(4000);
     stepper_.setAcceleration(2000);
     stepper_.setEnablePin(enPin_);
     stepper_.setPinsInverted(false, false, true);
-    stepper_.disableOutputs();
+    stepper_.disableOutputs();   // safe to disable now, config is written
 }
 
 // ── rest of your methods unchanged ──
