@@ -6,15 +6,15 @@
 #include <Arduino.h>
 #include <Debug/Logger.hpp>
 
-CurrentSensor::CurrentSensor(int pin, float vcc, float sensitivity, int samples)
+CurrentSensor::CurrentSensor(const int pin, const float vcc, const float sensitivity, const int samples)
     : pin_(pin), vcc_(vcc), sensitivity_(sensitivity), samples_(samples), zeroOffset_(vcc / 2.0f)
 {}
 
 void CurrentSensor::init() {
-    analogReadResolution(12);   // ESP32: use full 12-bit range (0–4095)
+    analogReadResolution(12);   // full 12-bit range (0–4095)
     pinMode(pin_, INPUT);
 
-    // Calibrate zero-current offset: motor must be stopped during begin()
+    // Calibrate zero-current offset
     zeroOffset_ = sampleAvgV();
 }
 
@@ -24,7 +24,7 @@ float CurrentSensor::sampleAvgV() const {
         sum += analogRead(pin_);
         delayMicroseconds(100);  // spread samples across PWM switching cycles
     }
-    float avgRaw = static_cast<float>(sum) / samples_;
+    const float avgRaw = static_cast<float>(sum) / samples_;
     return (avgRaw / 4095.0f) * vcc_;
 }
 
@@ -44,9 +44,10 @@ void CurrentSensor::printTelemetry() const {
 
 // Help from claude to crete this function
 void CurrentSensor::updateReading() {
-    float newReading = readCurrentA();
-    float prev = currentA_.load(std::memory_order_relaxed);
-    currentA_.store(0.3f * newReading + 0.7f * prev, std::memory_order_relaxed);
+    const float prev = currentA_.load(std::memory_order_relaxed);
+    constexpr float alpha = 0.3f;
+    const float newReading = alpha * readCurrentA() + (1 - alpha) * prev;
+    currentA_.store(newReading, std::memory_order_relaxed);
 }
 
 // Help from claude to create this function returns latest reading updated by the updateReading function

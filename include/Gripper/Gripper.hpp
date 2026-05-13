@@ -190,7 +190,7 @@ private:
      * https://www.beningo.com/158-state-machines-with-function-pointers/
      */
     std::array<StatemachineType, static_cast<size_t>(GripperState::NUM_STATES)> stateMachine_ = {{
-        { GripperState::IDLE, &Gripper::Sm_Idle},
+        {GripperState::IDLE, &Gripper::Sm_Idle},
         {GripperState::HOME, &Gripper::Sm_Home},
         {GripperState::LATCHING, &Gripper::Sm_Latching},
         {GripperState::OBSTACLE_DETECTED, &Gripper::Sm_ObstacleDetected},
