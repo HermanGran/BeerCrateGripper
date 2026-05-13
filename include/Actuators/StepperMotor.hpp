@@ -142,6 +142,10 @@ private:
 
     // Bool if the motor is running
     volatile bool running_ = false;
+
+    // In StepperMotor.hpp, inside the class, under private:
+    uint8_t calcCRC(uint8_t* data, uint8_t length);
+    void runUARTDiagnostic();
 };
 
 #endif //BEERCRATEGRIPPER_STEPPERMOTOR_HPP
