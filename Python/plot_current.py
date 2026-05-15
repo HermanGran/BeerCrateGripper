@@ -102,13 +102,15 @@ def load_all_runs(paths):
 
 # ── plot 1: current per phase ─────────────────────────────────────────────────
 
+CURRENT_PLOT_EXCLUDE = {"Homing"}
+
 def plot_current(runs, out_dir):
-    # Collect unique phase names in first-seen order
+    # Collect unique phase names in first-seen order, excluding Homing
     seen = set()
     phase_names = []
     for run in runs:
         for ph in run["phases"]:
-            if ph["name"] not in seen:
+            if ph["name"] not in seen and ph["name"] not in CURRENT_PLOT_EXCLUDE:
                 phase_names.append(ph["name"])
                 seen.add(ph["name"])
 
@@ -158,10 +160,11 @@ def plot_current(runs, out_dir):
     plt.tight_layout()
 
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    out = os.path.join(out_dir, f"current_{ts}.png")
-    plt.savefig(out, dpi=150)
+    for ext, kw in [("png", {"dpi": 150}), ("svg", {})]:
+        out = os.path.join(out_dir, f"current_{ts}.{ext}")
+        plt.savefig(out, **kw)
+        print(f"Saved: {out}")
     plt.close()
-    print(f"Saved: {out}")
 
 # ── plot 2: phase timing statistics ──────────────────────────────────────────
 
@@ -219,10 +222,11 @@ def plot_timing(runs, out_dir):
     plt.tight_layout()
 
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    out = os.path.join(out_dir, f"timing_{ts}.png")
-    plt.savefig(out, dpi=150)
+    for ext, kw in [("png", {"dpi": 150}), ("svg", {})]:
+        out = os.path.join(out_dir, f"timing_{ts}.{ext}")
+        plt.savefig(out, **kw)
+        print(f"Saved: {out}")
     plt.close()
-    print(f"Saved: {out}")
 
 # ── main ──────────────────────────────────────────────────────────────────────
 
