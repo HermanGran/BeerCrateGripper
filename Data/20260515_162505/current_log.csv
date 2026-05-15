@@ -1,0 +1,11 @@
+elapsed_ms,current_A,event
+5000.6,,Service request: command=3
+5000.7,,Gripper moving to idle position...
+9500.0,,Idle done. Phase took 4500 ms
+9500.6,,Publishing response. Total elapsed: 4501 ms
+13315.4,,Service request: command=1
+13315.6,,Gripper latching...
+13827.7,,Contact in latch zone at pos 16444 — latched
+13832.9,,Latched
+13834.1,,Latched! Phase took 519 ms
+13834.2,,Publishing response. Total elapsed: 520 ms
