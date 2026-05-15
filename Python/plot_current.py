@@ -244,9 +244,14 @@ def main():
         sys.exit(1)
     print(f"  {len(runs)} run(s) with phase data.\n")
 
-    os.makedirs(PLOTS_DIR, exist_ok=True)
-    plot_current(runs, PLOTS_DIR)
-    plot_timing(runs, PLOTS_DIR)
+    # Single log → save plots next to the CSV; multiple logs → shared plots dir
+    if len(paths) == 1:
+        out_dir = os.path.dirname(os.path.abspath(paths[0]))
+    else:
+        out_dir = PLOTS_DIR
+    os.makedirs(out_dir, exist_ok=True)
+    plot_current(runs, out_dir)
+    plot_timing(runs, out_dir)
 
 
 if __name__ == "__main__":
