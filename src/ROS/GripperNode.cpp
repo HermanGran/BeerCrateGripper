@@ -48,6 +48,7 @@ void GripperNode::service_callback(const void* req, void* res) {
     auto* response = (workcell_interfaces__srv__GripperCommand_Response*)res;
 
     auto cmd = static_cast<Gripper::GripperAction>(request->command);
+    unsigned long t_start = millis();
     logger.logf("Service request: command=%d", cmd);
 
     bool success = false;
@@ -57,24 +58,24 @@ void GripperNode::service_callback(const void* req, void* res) {
             logger.logf("Gripper homing...");
             instance->gripper_.homing();
             success = true;
-            logger.logf("Done.");
+            logger.logf("Homing done. Phase took %lu ms", millis() - t_start);
             break;
         case Gripper::GripperAction::LATCH: // 1
             logger.logf("Gripper latching...");
             success = instance->gripper_.latch();
-            logger.logf(success ? "Latched!" : "Latch failed!");
+            logger.logf(success ? "Latched! Phase took %lu ms" : "Latch failed! Phase took %lu ms", millis() - t_start);
             break;
         case Gripper::GripperAction::HOME: // 2
             logger.logf("Gripper releasing...");
             instance->gripper_.home();
             success = true;
-            logger.logf("Done.");
+            logger.logf("Home done. Phase took %lu ms", millis() - t_start);
             break;
         case Gripper::GripperAction::IDLE: // 3
             logger.logf("Gripper moving to idle position...");
             instance->gripper_.idlePos();
             success = true;
-            logger.logf("Done.");
+            logger.logf("Idle done. Phase took %lu ms", millis() - t_start);
             break;
 
         default:
@@ -82,6 +83,7 @@ void GripperNode::service_callback(const void* req, void* res) {
             break;
     }
 
+    logger.logf("Publishing response. Total elapsed: %lu ms", millis() - t_start);
     response->success = success;
 
     const char* msg = success ? "OK" : "Latch not detected";

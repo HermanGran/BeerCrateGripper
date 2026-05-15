@@ -80,10 +80,14 @@ void Gripper::stepperTaskWrapper(void* param) {
 // Created with claude code. Prints the current measurements to the UDP logger.
 void Gripper::sensorTaskWrapper(void* param) {
     auto* g = static_cast<Gripper*>(param);
+    uint32_t lastPrintMs = 0;
 
     while (g->tasksRunning_) {
         g->getCurrentSensor().updateReading();
-        //g->getCurrentSensor().printTelemetry();
+        if (millis() - lastPrintMs >= 100) {
+            g->getCurrentSensor().printTelemetry();
+            lastPrintMs = millis();
+        }
         vTaskDelay(1 / portTICK_PERIOD_MS);
     }
 
