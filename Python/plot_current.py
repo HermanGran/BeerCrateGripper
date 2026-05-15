@@ -1,75 +1,249 @@
 import csv
 import sys
 import os
+import re
 import glob
+from collections import defaultdict
+from datetime import datetime
+
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+import numpy as np
 
-EVENT_COLORS = [
-    "#e74c3c", "#e67e22", "#2ecc71", "#9b59b6",
-    "#1abc9c", "#f39c12", "#3498db", "#e91e63",
-]
+# ── patterns ────────────────────────────────────────────────────────────────
+
+PHASE_START = {
+    "Homing": re.compile(r"Gripper homing"),
+    "Latch":  re.compile(r"Gripper latching"),
+    "Home":   re.compile(r"Gripper releasing"),
+    "Idle":   re.compile(r"Gripper moving to idle"),
+}
+PHASE_TOOK_RE = re.compile(r"Phase took (\d+) ms")
+
+# ── paths ────────────────────────────────────────────────────────────────────
+
+DATA_DIR  = os.path.join(os.path.dirname(__file__), "..", "Data")
+PLOTS_DIR = os.path.join(DATA_DIR, "plots")
+
+PHASE_COLORS = {
+    "Homing": "#3498db",
+    "Latch":  "#e74c3c",
+    "Home":   "#2ecc71",
+    "Idle":   "#e67e22",
+}
+
+# ── loading ──────────────────────────────────────────────────────────────────
+
+def find_all_logs():
+    return sorted(glob.glob(os.path.join(DATA_DIR, "*", "current_log.csv")))
 
 
-def find_latest_log():
-    data_dir = os.path.join(os.path.dirname(__file__), "..", "Data")
-    logs = sorted(glob.glob(os.path.join(data_dir, "*", "current_log.csv")))
-    if not logs:
-        print("No log files found in Data/")
-        sys.exit(1)
-    return logs[-1]
+def resolve_paths(args):
+    """Accept CSV files or Data/<timestamp>/ directories."""
+    paths = []
+    for a in args:
+        if a.endswith(".csv") and os.path.isfile(a):
+            paths.append(a)
+        else:
+            p = os.path.join(a, "current_log.csv")
+            if os.path.isfile(p):
+                paths.append(p)
+    return sorted(paths)
 
 
-def load_csv(path):
-    times, currents, events = [], [], []
-    with open(path, newline="") as f:
+def load_run(csv_path):
+    """Parse one CSV into a list of phase dicts."""
+    phases = []
+    active = None  # the phase currently being built
+
+    with open(csv_path, newline="") as f:
         for row in csv.DictReader(f):
             elapsed = float(row["elapsed_ms"])
+
             if row["current_A"]:
-                times.append(elapsed)
-                currents.append(float(row["current_A"]))
+                if active is not None:
+                    active["rel_times"].append(elapsed - active["start_ms"])
+                    active["currents"].append(float(row["current_A"]))
+
             elif row["event"]:
-                events.append((elapsed, row["event"]))
-    return times, currents, events
+                event = row["event"]
+
+                # phase start?
+                for name, pat in PHASE_START.items():
+                    if pat.search(event):
+                        active = {
+                            "name": name,
+                            "start_ms": elapsed,
+                            "duration_ms": None,
+                            "rel_times": [],
+                            "currents": [],
+                        }
+                        phases.append(active)
+                        break
+
+                # phase end?
+                m = PHASE_TOOK_RE.search(event)
+                if m and active is not None:
+                    active["duration_ms"] = int(m.group(1))
+                    active = None
+
+    return phases
 
 
-def plot(path):
-    times, currents, events = load_csv(path)
+def load_all_runs(paths):
+    runs = []
+    for path in paths:
+        phases = load_run(path)
+        if phases:
+            runs.append({"path": path, "phases": phases})
+        else:
+            print(f"  (skipped — no phase data): {path}")
+    return runs
 
-    if not times:
-        print("No current readings found in log.")
+# ── plot 1: current per phase ─────────────────────────────────────────────────
+
+def plot_current(runs, out_dir):
+    # Collect unique phase names in first-seen order
+    seen = set()
+    phase_names = []
+    for run in runs:
+        for ph in run["phases"]:
+            if ph["name"] not in seen:
+                phase_names.append(ph["name"])
+                seen.add(ph["name"])
+
+    if not phase_names:
+        print("No current data to plot.")
+        return
+
+    n = len(phase_names)
+    fig, axes = plt.subplots(1, n, figsize=(6 * n, 5), squeeze=False)
+    axes = axes[0]
+
+    for ax, pname in zip(axes, phase_names):
+        color = PHASE_COLORS.get(pname, "#888888")
+        all_t, all_c = [], []
+
+        for run in runs:
+            for ph in run["phases"]:
+                if ph["name"] != pname or not ph["rel_times"]:
+                    continue
+                ax.plot(ph["rel_times"], ph["currents"],
+                        linewidth=0.6, alpha=0.35, color=color)
+                all_t.extend(ph["rel_times"])
+                all_c.extend(ph["currents"])
+
+        # Average line: bin into 20 ms buckets
+        if all_t:
+            bucket_ms = 20
+            buckets = defaultdict(list)
+            for t, c in zip(all_t, all_c):
+                buckets[int(t // bucket_ms)].append(c)
+            bkeys = sorted(buckets)
+            ax.plot(
+                [b * bucket_ms for b in bkeys],
+                [np.mean(buckets[b]) for b in bkeys],
+                linewidth=2.0, color=color, label="mean",
+            )
+
+        ax.axhline(0, color="#aaaaaa", linewidth=0.5, linestyle="--")
+        ax.set_title(pname)
+        ax.set_xlabel("Time since phase start (ms)")
+        ax.set_ylabel("Current (A)")
+        ax.grid(True, alpha=0.3)
+        ax.legend(fontsize=8)
+
+    n_runs = len(runs)
+    fig.suptitle(f"Gripper current per phase — {n_runs} run(s)", fontsize=12)
+    plt.tight_layout()
+
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    out = os.path.join(out_dir, f"current_{ts}.png")
+    plt.savefig(out, dpi=150)
+    plt.close()
+    print(f"Saved: {out}")
+
+# ── plot 2: phase timing statistics ──────────────────────────────────────────
+
+def plot_timing(runs, out_dir):
+    durations = defaultdict(list)
+    for run in runs:
+        for ph in run["phases"]:
+            if ph["duration_ms"] is not None:
+                durations[ph["name"]].append(ph["duration_ms"])
+
+    if not durations:
+        print("No timing data to plot.")
+        return
+
+    phase_names = list(durations.keys())
+    x = np.arange(len(phase_names))
+    means = [np.mean(durations[p]) for p in phase_names]
+    stds  = [np.std(durations[p])  for p in phase_names]
+    mins  = [np.min(durations[p])  for p in phase_names]
+    maxs  = [np.max(durations[p])  for p in phase_names]
+    counts = [len(durations[p]) for p in phase_names]
+    colors = [PHASE_COLORS.get(p, "#888888") for p in phase_names]
+
+    fig, ax = plt.subplots(figsize=(max(6, len(phase_names) * 2.8), 6))
+
+    ax.bar(x, means, yerr=stds, capsize=7, color=colors, alpha=0.75,
+           error_kw={"linewidth": 1.5, "ecolor": "#444444"}, zorder=3)
+
+    # Individual run dots
+    for i, pname in enumerate(phase_names):
+        ax.scatter([i] * len(durations[pname]), durations[pname],
+                   color="black", s=25, alpha=0.55, zorder=5)
+
+    # Annotation above each bar
+    y_pad = (max(maxs) - min(mins)) * 0.04 + 20
+    for i, pname in enumerate(phase_names):
+        label = (
+            f"n={counts[i]}\n"
+            f"avg={means[i]:.0f} ms\n"
+            f"min={mins[i]:.0f} ms\n"
+            f"max={maxs[i]:.0f} ms\n"
+            f"σ={stds[i]:.0f} ms"
+        )
+        ax.text(i, maxs[i] + y_pad, label,
+                ha="center", va="bottom", fontsize=8, color="#222222",
+                bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="#cccccc", alpha=0.8))
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(phase_names, fontsize=11)
+    ax.set_ylabel("Duration (ms)")
+    ax.set_title(
+        f"Phase timing — {sum(counts)} measurements across {len(runs)} run(s)"
+    )
+    ax.grid(True, axis="y", alpha=0.3, zorder=0)
+    plt.tight_layout()
+
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    out = os.path.join(out_dir, f"timing_{ts}.png")
+    plt.savefig(out, dpi=150)
+    plt.close()
+    print(f"Saved: {out}")
+
+# ── main ──────────────────────────────────────────────────────────────────────
+
+def main():
+    paths = resolve_paths(sys.argv[1:]) if len(sys.argv) > 1 else find_all_logs()
+
+    if not paths:
+        print("No CSV logs found. Run udp_csv_capture.py first.")
         sys.exit(1)
 
-    fig, ax = plt.subplots(figsize=(14, 5))
-    ax.plot(times, currents, linewidth=0.8, color="steelblue")
-    ax.axhline(0, color="#aaaaaa", linewidth=0.6, linestyle="--")
+    print(f"Loading {len(paths)} log(s)...")
+    runs = load_all_runs(paths)
+    if not runs:
+        print("No usable phase data in any log.")
+        sys.exit(1)
+    print(f"  {len(runs)} run(s) with phase data.\n")
 
-    legend_handles = [mpatches.Patch(color="steelblue", label="Current (A)")]
-    y_top = max(currents) if currents else 1.0
-    y_bot = min(currents) if currents else -1.0
-    y_span = y_top - y_bot or 1.0
-
-    for i, (t, label) in enumerate(events):
-        color = EVENT_COLORS[i % len(EVENT_COLORS)]
-        ax.axvline(t, color=color, linewidth=1.2, linestyle="--", alpha=0.85)
-        ax.text(
-            t, y_top - 0.02 * y_span,
-            label, rotation=90, fontsize=7,
-            va="top", ha="right", color=color,
-        )
-        legend_handles.append(mpatches.Patch(color=color, label=label[:50]))
-
-    ax.set_xlabel("Elapsed time (ms)")
-    ax.set_ylabel("Current (A)")
-    log_name = os.path.basename(os.path.dirname(path))
-    ax.set_title(f"Gripper current — {log_name}")
-    ax.legend(handles=legend_handles, fontsize=7, loc="upper right")
-    ax.grid(True, alpha=0.3)
-    plt.tight_layout()
-    plt.show()
+    os.makedirs(PLOTS_DIR, exist_ok=True)
+    plot_current(runs, PLOTS_DIR)
+    plot_timing(runs, PLOTS_DIR)
 
 
 if __name__ == "__main__":
-    path = sys.argv[1] if len(sys.argv) > 1 else find_latest_log()
-    print(f"Plotting: {path}")
-    plot(path)
+    main()
