@@ -33,7 +33,7 @@ def create_log_dir():
 
 def main():
     log_dir = create_log_dir()
-    csv_path = os.path.join(log_dir, "current_log.csv")
+    csv_path = os.path.join(log_dir, "gripper_log.csv")
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind(("", UDP_PORT))
