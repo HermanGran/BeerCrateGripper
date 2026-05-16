@@ -84,12 +84,12 @@ void Gripper::sensorTaskWrapper(void* param) {
 
     while (g->tasksRunning_) {
         g->getCurrentSensor().updateReading();
-        /*
+
         if (millis() - lastPrintMs >= 100) {
             g->getCurrentSensor().printTelemetry();
             lastPrintMs = millis();
         }
-        */
+
         vTaskDelay(1 / portTICK_PERIOD_MS);
     }
 
@@ -133,19 +133,22 @@ void Gripper::moveToPosition(const int position) {
 
 void Gripper::home() {
     gripperState_ = GripperState::RELEASING;
-    stepper_.setSpeedParams(6500, 18000);
+    //stepper_.setSpeedParams(6500, 18000);
+    stepper_.setSpeedParams(4000, 2000);
     moveToPosition(homePos_);
 }
 
 void Gripper::idlePos() {
     gripperState_ = GripperState::RELEASING;
-    stepper_.setSpeedParams(6500, 18000);
+    //stepper_.setSpeedParams(6500, 18000);
+    stepper_.setSpeedParams(4000, 2000);
     moveToPosition(idlePos_);
 }
 
 bool Gripper::latch() {
     gripperState_ = GripperState::LATCHING;
-    stepper_.setSpeedParams(6500, 13000);
+    //stepper_.setSpeedParams(6500, 13000);
+    stepper_.setSpeedParams(4000, 2000);
     moveToPosition(fullyExtended_);
 
     switch (gripperState_) {

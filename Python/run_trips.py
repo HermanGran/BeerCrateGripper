@@ -50,7 +50,15 @@ def call_gripper(command, label):
 
 
 def main():
-    log_dir  = create_log_dir()
+    # Optional: pass the folder created by udp_csv_capture.py so both CSVs
+    # land in the same directory and the plotter can compute latency.
+    # Usage: python run_trips.py Data/20260516_103000
+    if len(sys.argv) > 1:
+        log_dir = os.path.abspath(sys.argv[1])
+        os.makedirs(log_dir, exist_ok=True)
+    else:
+        log_dir = create_log_dir()
+
     csv_path = os.path.join(log_dir, "timing_log.csv")
 
     print(f"Starting {NUM_TRIPS} trips: Idle → Latch → Idle → Home")

@@ -272,55 +272,96 @@ def load_timing_logs(paths):
     return records
 
 
-def plot_rtt(records, out_dir):
-    if not records:
-        print("No RTT data to plot.")
+def extract_phase_durations(current_log_path):
+    """Return list of 'Phase took X ms' values in order from a current_log CSV."""
+    durations = []
+    with open(current_log_path, newline="") as f:
+        for row in csv.DictReader(f):
+            if row["event"]:
+                m = PHASE_TOOK_RE.search(row["event"])
+                if m:
+                    durations.append(int(m.group(1)))
+    return durations
+
+
+def compute_latencies(timing_records, phase_durations):
+    """
+    latency = PC_total_duration - ESP32_phase_duration
+    Subtracting the ESP32's own execution time leaves only the round-trip
+    communication overhead between PC and the Nano.
+    """
+    n = min(len(timing_records), len(phase_durations))
+    if len(timing_records) != len(phase_durations):
+        print(f"  Warning: {len(timing_records)} timing entries vs "
+              f"{len(phase_durations)} phase events — using first {n}")
+
+    latencies = []
+    for i, (rec, phase_ms) in enumerate(zip(timing_records[:n], phase_durations[:n])):
+        latencies.append({
+            "call_idx":    i + 1,
+            "trip":        rec["trip"],
+            "step":        rec["step"],
+            "label":       rec["label"],
+            "pc_ms":       rec["duration_ms"],
+            "phase_ms":    phase_ms,
+            "latency_ms":  rec["duration_ms"] - phase_ms,
+        })
+    return latencies
+
+
+def plot_latency(latencies, out_dir):
+    if not latencies:
+        print("No latency data to plot.")
         return
 
-    # Ordered unique (step, label) pairs in sequence order
-    seen = set()
-    step_keys = []
-    for r in records:
-        k = (r["step"], r["label"])
-        if k not in seen:
-            step_keys.append(k)
-            seen.add(k)
+    idx      = [r["call_idx"]   for r in latencies]
+    lat      = [r["latency_ms"] for r in latencies]
+    labels   = [r["label"]      for r in latencies]
 
-    # Labels that appear more than once need a step suffix to disambiguate
-    label_count = defaultdict(int)
-    for _, label in step_keys:
-        label_count[label] += 1
+    mean_v = np.mean(lat)
+    std_v  = np.std(lat)
+    min_v  = np.min(lat)
+    max_v  = np.max(lat)
 
-    trips = sorted(set(r["trip"] for r in records))
-    fig, ax = plt.subplots(figsize=(max(8, len(trips) * 0.9 + 2), 5))
+    fig, ax = plt.subplots(figsize=(max(8, len(idx) * 0.35 + 2), 5))
 
-    for step, label in step_keys:
-        step_records = [r for r in records if r["step"] == step and r["label"] == label]
-        step_trips   = [r["trip"]        for r in step_records]
-        durations    = [r["duration_ms"] for r in step_records]
-        color        = PHASE_COLORS.get(label, "#888888")
-        display      = f"{label} (step {step})" if label_count[label] > 1 else label
+    # Thin connecting line
+    ax.plot(idx, lat, color="#aaaaaa", linewidth=0.8, zorder=3)
 
-        ax.plot(step_trips, durations, marker="o", linewidth=1.5,
-                markersize=5, color=color, label=display, alpha=0.85)
+    # Dots colored by phase for context, but phase is not the main point
+    for label in dict.fromkeys(labels):
+        mask = [i for i, l in enumerate(labels) if l == label]
+        ax.scatter([idx[i] for i in mask], [lat[i] for i in mask],
+                   color=PHASE_COLORS.get(label, "#888888"),
+                   s=35, label=label, zorder=5, alpha=0.85)
 
-        mean_val = np.mean(durations)
-        ax.axhline(mean_val, color=color, linewidth=0.9, linestyle="--", alpha=0.5)
-        ax.text(max(step_trips) + 0.15, mean_val,
-                f"avg={mean_val:.0f} ms", va="center", fontsize=9, color=color)
+    # Mean line + ±1σ band
+    ax.axhline(mean_v, color="#222222", linewidth=1.5, linestyle="--", zorder=4)
+    ax.axhspan(mean_v - std_v, mean_v + std_v, alpha=0.08, color="#222222")
 
-    ax.set_xticks(trips)
-    ax.set_xlabel("Trip number", fontsize=12)
-    ax.set_ylabel("Round-trip duration (ms)", fontsize=12)
-    ax.set_title("PC-side round-trip command timing", fontsize=14, fontweight="bold")
-    ax.tick_params(labelsize=11)
-    ax.legend(fontsize=10)
+    # Stats box (top-left, inside axes — never overlaps)
+    stats = (
+        f"n = {len(lat)}\n"
+        f"avg = {mean_v:.1f} ms\n"
+        f"min = {min_v:.1f} ms\n"
+        f"max = {max_v:.1f} ms\n"
+        f"σ  = {std_v:.1f} ms"
+    )
+    ax.text(0.02, 0.97, stats, transform=ax.transAxes,
+            va="top", ha="left", fontsize=11, family="monospace",
+            bbox=dict(boxstyle="round,pad=0.5", fc="white", ec="#cccccc", alpha=0.9))
+
+    ax.set_xlabel("Command index", fontsize=13)
+    ax.set_ylabel("Latency (ms)", fontsize=13)
+    ax.set_title("Communication latency — PC ↔ ESP32 (Nano)", fontsize=15, fontweight="bold")
+    ax.tick_params(labelsize=12)
+    ax.legend(fontsize=11, title="Phase (context)", title_fontsize=10)
     ax.grid(True, alpha=0.3)
     plt.tight_layout()
 
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     for ext, kw in [("png", {"dpi": 150}), ("svg", {})]:
-        out = os.path.join(out_dir, f"rtt_{ts}.{ext}")
+        out = os.path.join(out_dir, f"latency_{ts}.{ext}")
         plt.savefig(out, **kw)
         print(f"Saved: {out}")
     plt.close()
@@ -353,11 +394,30 @@ def main():
         else:
             print("  No usable phase data.\n")
 
-    if timing_paths:
-        print(f"Loading {len(timing_paths)} timing log(s)...")
-        records = load_timing_logs(timing_paths)
-        print(f"  {len(records)} timing records.\n")
-        plot_rtt(records, out_dir)
+    if timing_paths and current_paths:
+        # Group by parent directory — only compute latency where both files coexist
+        current_by_dir = {os.path.dirname(os.path.abspath(p)): p for p in current_paths}
+        timing_by_dir  = {os.path.dirname(os.path.abspath(p)): p for p in timing_paths}
+        shared_dirs    = set(current_by_dir) & set(timing_by_dir)
+
+        if shared_dirs:
+            all_timing  = load_timing_logs([timing_by_dir[d]  for d in sorted(shared_dirs)])
+            all_phase_d = []
+            for d in sorted(shared_dirs):
+                all_phase_d.extend(extract_phase_durations(current_by_dir[d]))
+
+            print(f"Computing latencies ({len(all_timing)} commands, "
+                  f"{len(all_phase_d)} phase events)...")
+            latencies = compute_latencies(all_timing, all_phase_d)
+            if latencies:
+                print(f"  {len(latencies)} latency samples.\n")
+                plot_latency(latencies, out_dir)
+        else:
+            print("  No matching folders — pass the same directory to both "
+                  "udp_csv_capture.py and run_trips.py to enable latency plots.\n")
+    elif timing_paths:
+        print("  timing_log.csv found but no matching current_log.csv — "
+              "latency plot requires both files in the same folder.\n")
 
 
 if __name__ == "__main__":
