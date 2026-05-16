@@ -35,7 +35,7 @@ PHASE_COLORS = {
 # ── loading ──────────────────────────────────────────────────────────────────
 
 def find_all_logs():
-    return sorted(glob.glob(os.path.join(DATA_DIR, "*", "current_log.csv")))
+    return sorted(glob.glob(os.path.join(DATA_DIR, "*", "gripper_log.csv")))
 
 
 def resolve_paths(args):
@@ -45,7 +45,7 @@ def resolve_paths(args):
         if a.endswith(".csv") and os.path.isfile(a):
             paths.append(a)
         else:
-            p = os.path.join(a, "current_log.csv")
+            p = os.path.join(a, "gripper_log.csv")
             if os.path.isfile(p):
                 paths.append(p)
     return sorted(paths)
