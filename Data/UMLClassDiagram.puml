@@ -1,84 +1,23 @@
 @startuml BeerCrateGripper
 
-skinparam classAttributeIconSize 0
-skinparam classFontStyle bold
-skinparam packageStyle rectangle
-skinparam linetype ortho
-skinparam nodesep 60
-skinparam ranksep 80
+top to bottom direction
+
 
 ' ─────────────────────────────────────────
-'  Row 1: Debug | Sensors | Actuators
+'  Debug (standalone)
 ' ─────────────────────────────────────────
-together {
-    package "Debug" {
-        class UDPLogger {
-            - udp_   : WiFiUDP
-            - pcIP_  : IPAddress
-            - port_  : uint16_t
-            --
-            + init(ip, port) : void
-            + log(msg : const char*) : void
-            + logf(format : const char*, ...) : void
-        }
-        note "Global instance:\nextern UDPLogger logger" as N_logger
-        UDPLogger .. N_logger
+package "Debug" {
+    class UDPLogger {
+        - udp_   : WiFiUDP
+        - pcIP_  : IPAddress
+        - port_  : uint16_t
+        --
+        + init(ip, port) : void
+        + log(msg : const char*) : void
+        + logf(format : const char*, ...) : void
     }
-
-    package "Sensors" {
-        class LimitSwitch {
-            - pin_ : int
-            --
-            + LimitSwitch(pin : int)
-            + init() : void
-            + isPressed() : bool
-        }
-
-        class CurrentSensor {
-            - pin_         : int
-            - vcc_         : float
-            - sensitivity_ : float
-            - samples_     : int
-            - zeroOffset_  : float
-            - currentA_    : atomic<float>
-            --
-            + init() : void
-            + readCurrentA() : float
-            + isLatched(thresholdA : float) : bool
-            + updateReading() : void
-            + getLatestReading() : float
-            + printTelemetry() : void
-            - sampleAvgV() : float
-        }
-    }
-
-    package "Actuators" {
-        class StepperMotor {
-            - stepper_           : AccelStepper
-            - enPin_             : int8_t
-            - dirPin_            : int8_t
-            - stepPin_           : int8_t
-            - ms1Pin_            : int8_t
-            - ms2Pin_            : int8_t
-            - fullSteps          : int
-            - stepsPerRevolution_: int
-            --
-            + init() : void
-            + setSpeed(speed : float) : void
-            + setMaxSpeed(speed : float) : void
-            + setAcceleration(acc : float) : void
-            + setMicroStepping(ms : int8_t) : void
-            + runToPosition(position : int) : void
-            + run() : void
-            + stop() : void
-            + hardStop() : void
-            + isRunning() : bool
-            + setHomePos() : void
-            + getPosition() : int
-            + enableOutputs() : void
-            + disableOutputs() : void
-        }
-    }
+    note "Global instance:\nextern UDPLogger logger" as N_logger
+    UDPLogger .. N_logger
 }
 
 ' ─────────────────────────────────────────
@@ -151,6 +90,61 @@ package "Gripper" {
         - Sm_Tighten() : void
         - Sm_Latched() : void
         - Sm_Failed() : void
+    }
+
+    package "Sensors" {
+        class LimitSwitch {
+            - pin_ : int
+            --
+            + LimitSwitch(pin : int)
+            + init() : void
+            + isPressed() : bool
+        }
+
+        class CurrentSensor {
+            - pin_         : int
+            - vcc_         : float
+            - sensitivity_ : float
+            - samples_     : int
+            - zeroOffset_  : float
+            - currentA_    : atomic<float>
+            --
+            + init() : void
+            + readCurrentA() : float
+            + isLatched(thresholdA : float) : bool
+            + updateReading() : void
+            + getLatestReading() : float
+            + printTelemetry() : void
+            - sampleAvgV() : float
+        }
+    }
+
+    package "Actuators" {
+        class StepperMotor {
+            - stepper_           : AccelStepper
+            - enPin_             : int8_t
+            - dirPin_            : int8_t
+            - stepPin_           : int8_t
+            - ms1Pin_            : int8_t
+            - ms2Pin_            : int8_t
+            - fullSteps          : int
+            - stepsPerRevolution_: int
+            --
+            + init() : void
+            + setSpeed(speed : float) : void
+            + setMaxSpeed(speed : float) : void
+            + setAcceleration(acc : float) : void
+            + setMicroStepping(ms : int8_t) : void
+            + runToPosition(position : int) : void
+            + run() : void
+            + stop() : void
+            + hardStop() : void
+            + isRunning() : bool
+            + setHomePos() : void
+            + getPosition() : int
+            + enableOutputs() : void
+            + disableOutputs() : void
+        }
     }
 
     Gripper *-- StepperMotor    : "stepper_"
@@ -233,20 +227,20 @@ package "main" {
         + setup() : void
         + loop() : void
     }
-
-    Main *-- Gripper            : "gripper"
-    Main *-- GripperNode        : "gripperNode"
-    Main *-- UDPLogger          : "logger"
-    Main *-- MicroRosConnection : "mrCon"
 }
 
+Main *-- Gripper            : "gripper"
+Main *-- GripperNode        : "gripperNode"
+Main *-- UDPLogger          : "logger"
+Main *-- MicroRosConnection : "mrCon"
+
 ' ─────────────────────────────────────────
-'  Layout hints: force top-to-bottom flow
+'  Layout hints: main at top, branching down
 ' ─────────────────────────────────────────
-Debug -[hidden]right-> Sensors
-Sensors -[hidden]right-> Actuators
-Sensors -[hidden]down-> Gripper
-Gripper -[hidden]down-> ROS
-ROS -[hidden]down-> main
+main -[hidden]down-> Debug
+main -[hidden]down-> Gripper
+main -[hidden]down-> ROS
+Debug -[hidden]right-> Gripper
+Gripper -[hidden]right-> ROS
 
 @enduml
